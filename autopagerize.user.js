@@ -6,7 +6,7 @@
 // ==/UserScript==
 //
 // auther:  youhei
-// version: 0.0.3 (2007.1.17 00:33:36)
+// varsion: 0.0.4(2007.1.17 06:39:19)
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -17,6 +17,8 @@
 // http://www.gnu.org/copyleft/gpl.html
 //
 (function() {
+    var DEBUG_MODE = false
+
     var HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 
     var SITEINFO_IMPORT_URLS = [
@@ -50,7 +52,37 @@
             insertBefore: '//table[position()=11]',
             pageElement:  '//table[position()=7]',
             remainHeight: 1200
-        }
+        },
+        {
+            url:          'http://up.nm78.com/thumb',
+            nextLink:     '//p[@class="menu"]/a[last()]',
+            insertBefore: '//div[@class="banner_top"][last()]',
+            pageElement:  '//table[@class="thumb"]',
+            remainHeight: 800
+        },
+        {
+            url:          'http://d.hatena.ne.jp/swdyh/',
+            nextLink:     '//div[@class="calendar"]//a',
+            insertBefore: 'id("f")',
+            pageElement:  '//div[@class="hatena-body"]',
+            remainHeight: 1000
+        },
+        {
+            url:          'http://www.nicovideo.jp/',
+            nextLink:     '//table[position()=3]/tbody/tr/td/div[position()=2]/p[last()]/a[last()]',
+            insertBefore: '//table[position()=3]/tbody/tr/td/div[position()=3]',
+            pageElement:  '//table[position()=3]/tbody/tr/td/table',
+            remainHeight: 1500
+        },
+        /* template
+        {
+            url:          '',
+            nextLink:     '',
+            insertBefore: '',
+            pageElement:  '',
+            remainHeight: 1000
+        },
+        */
     ]
 
     var AutoPager = function(info, state) {
@@ -58,7 +90,8 @@
         this.info    = info
         this.state   = state
         var url = this.getNextURL(info.nextLink, document)
-        if (!url) {
+        this.insertPoint = getFirstElementByXPath(info.insertBefore)
+        if (!url || !this.insertPoint) {
             return
         }
         this.requestURL = url
@@ -67,7 +100,8 @@
         this.scroll = function() {ap.onScroll.apply(ap)}
         document.body.addEventListener("dblclick", this.toggle, true)
         window.addEventListener("scroll", this.scroll, true)
-        this.insertPoint = getFirstElementByXPath(info.insertBefore)
+
+
         this.initMessage('AutoPager')
     }
     AutoPager.prototype.onScroll = function() {
@@ -116,8 +150,16 @@
     AutoPager.prototype.requestLoad = function(res) {
         var t = res.responseText
         var htmlDoc = createHTMLDocumentByString(t)
-        var url = this.getNextURL(this.info.nextLink, htmlDoc)
-        var page = getFirstElementByXPath(this.info.pageElement, htmlDoc)
+        try {
+            var url = this.getNextURL(this.info.nextLink, htmlDoc)
+            var page = getFirstElementByXPath(this.info.pageElement, htmlDoc)
+        }
+        catch(e){
+            unsafeWindow.console.log(e)
+            this.terminate()
+            return
+        }
+
         if (!url || !page) {
             this.terminate()
             return
@@ -244,7 +286,7 @@
 
     // utility functions.
     function createHTMLDocumentByString(str) {
-        html = str.replace(/<!DOCTYPE.*?>/, '').replace(/<html.*?>/, '').replace(/<\/html>.*/, '')
+        var html = str.replace(/<!DOCTYPE.*?>/, '').replace(/<html.*?>/, '').replace(/<\/html>.*/, '')
         var htmlDoc  = document.implementation.createDocument(null, 'html', null)
         var fragment = createDocumentFragmentByString(html)
         htmlDoc.documentElement.appendChild(fragment)
@@ -267,12 +309,29 @@
         var result = doc.evaluate(xpath, doc, null,
             XPathResult.FIRST_ORDERED_NODE_TYPE, null)
         // for search element
-        // result.singleNodeValue.style.border = "3px solid #f00"
+        if (DEBUG_MODE) {
+            var rule = [".match{border: 3px solid #f00}\n",
+                        ".match:after{content:'", xpath, "'}\n"].join('')
+            addGlobalStyle(rule)
+            result.singleNodeValue.className = 
+                result.singleNodeValue.className + ' match'
+        }
         return result.singleNodeValue ? result.singleNodeValue : null
     }
     function createDocumentFragmentByString(str) {
         var range = document.createRange()
         range.setStartAfter(document.body)
         return range.createContextualFragment(str)
+    }
+    // http://diveintogreasemonkey.org/patterns/add-css.html
+    function addGlobalStyle(css) {
+        var head
+        head = document.getElementsByTagName('head')[0]
+        if (head) {
+            var style = document.createElement('style')
+            style.type = 'text/css'
+            style.innerHTML = css
+            head.appendChild(style)
+        }
     }
 })()
