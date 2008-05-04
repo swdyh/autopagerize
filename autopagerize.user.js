@@ -5,8 +5,8 @@
 // @include        *
 // ==/UserScript==
 //
-// auther:  youhei
-// version: 0.0.5 2007.1.24 03:29:48
+// auther:  youhei http://d.hatena.ne.jp/swdyh/
+// version: 0.0.6 2007/4/14 07:59:39
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -27,10 +27,10 @@
     ]
     var SITEINFO = [
         {
-            url: 'http://www.google.*/search*',
-            nextLink: 'id("navbar")/table/tbody/tr/td[last()]/a',
+            url:          'http://www.google.*/search*',
+            nextLink:     'id("navbar")/table/tbody/tr/td[last()]/a',
             insertBefore: 'id("navbar")',
-            pageElement: '//div[2]',
+            pageElement:  '//div[2]',
             remainHeight: 800
         },
         /* template
@@ -92,8 +92,13 @@
         }
         this.lastRequestURL = this.requestURL
         var self = this
-        var opt = {method: 'get', url: this.requestURL,
-            onload: function(res){self.requestLoad.apply(self, [res])}}
+        var opt = {
+            method: 'get', 
+            url: this.requestURL,
+            overrideMimeType: this.info.mimeType,
+            onload: function(res){
+                self.requestLoad.apply(self, [res])
+            }}
         this.showLoading(true)
         GM_xmlhttpRequest(opt)
     }
@@ -111,16 +116,12 @@
         var t = res.responseText
         var htmlDoc = createHTMLDocumentByString(t)
         try {
-            var url = this.getNextURL(this.info.nextLink, htmlDoc)
             var page = getFirstElementByXPath(this.info.pageElement, htmlDoc)
+            var url = this.getNextURL(this.info.nextLink, htmlDoc)
         }
-        catch(e){
-            unsafeWindow.console.log(e)
-            this.terminate()
-            return
-        }
-
-        if (!url || !page) {
+        catch(e){}
+        
+        if (!page) {
             this.terminate()
             return
         }
@@ -134,6 +135,10 @@
         this.requestURL = url
         this.addPage(htmlDoc, page)
         this.showLoading(false)
+
+        if (!url) {
+            this.terminate()
+        }
     }
     AutoPager.prototype.addPage = function(htmlDoc, page) {
         var hr = htmlDoc.createElementNS(HTML_NAMESPACE, 'hr')
