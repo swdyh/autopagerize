@@ -6,7 +6,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.18 2007-12-06T14:29:52+09:00
+// version: 0.0.19 2007-12-19T18:26:22+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -23,7 +23,7 @@ if (window != window.parent) {
 
 var HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 var URL = 'http://userscripts.org/scripts/show/8551'
-var VERSION = '0.0.18'
+var VERSION = '0.0.19'
 var DEBUG_MODE = false
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
@@ -219,6 +219,10 @@ AutoPager.prototype.request = function() {
             self.requestLoad.apply(self, [res])
         }}
     this.showLoading(true)
+    if (!opt.url.match(/^http/)) {
+        opt.url = location.protocol + '//'+ location.host +
+                  location.port + opt.url
+    }
     GM_xmlhttpRequest(opt)
 }
 
@@ -263,15 +267,16 @@ AutoPager.prototype.requestLoad = function(res) {
 }
 
 AutoPager.prototype.addPage = function(htmlDoc, page) {
-    var hr = htmlDoc.createElementNS(HTML_NAMESPACE, 'hr')
-    var p = htmlDoc.createElementNS(HTML_NAMESPACE, 'p')
+    var hr = document.createElementNS(HTML_NAMESPACE, 'hr')
+    var p = document.createElementNS(HTML_NAMESPACE, 'p')
     var self = this
     this.insertPoint.parentNode.insertBefore(hr, this.insertPoint)
     this.insertPoint.parentNode.insertBefore(p, this.insertPoint)
     p.innerHTML = 'page: <a class="autopagerize_link" href="' +
         this.requestURL + '">' + (++this.pageNum) + '</a>'
     page.forEach(function(i) {
-        self.insertPoint.parentNode.insertBefore(i, self.insertPoint)
+        var pe = document.importNode(i, true)
+        self.insertPoint.parentNode.insertBefore(pe, self.insertPoint)
     })
 }
 
@@ -459,13 +464,14 @@ function createHTMLDocumentByString(str) {
     var html = str.replace(/<!DOCTYPE.*?>/, '').replace(/<html.*?>/, '').replace(/<\/html>.*/, '')
     var htmlDoc  = document.implementation.createDocument(null, 'html', null)
     var fragment = createDocumentFragmentByString(html)
-    htmlDoc.documentElement.appendChild(fragment)
+    htmlDoc.documentElement.appendChild(htmlDoc.importNode(fragment, true))
     return htmlDoc
 }
 
 function getElementsByXPath(xpath, node) {
     var node = node || document
-    var nodesSnapshot = document.evaluate(xpath, node, null,
+    var doc = node.ownerDocument ? node.ownerDocument : node
+    var nodesSnapshot = doc.evaluate(xpath, node, null,
         XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)
     var data = []
     for (var i = 0; i < nodesSnapshot.snapshotLength; i++) {
@@ -476,7 +482,8 @@ function getElementsByXPath(xpath, node) {
 
 function getFirstElementByXPath(xpath, node) {
     var node = node || document
-    var result = document.evaluate(xpath, node, null,
+    var doc = node.ownerDocument ? node.ownerDocument : node
+    var result = doc.evaluate(xpath, node, null,
         XPathResult.FIRST_ORDERED_NODE_TYPE, null)
     // for search element
     if (DEBUG_MODE) {
