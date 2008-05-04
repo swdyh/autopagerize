@@ -6,7 +6,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.17 2007-10-17T20:25:46+09:00
+// version: 0.0.18 2007-12-06T14:29:52+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -23,7 +23,7 @@ if (window != window.parent) {
 
 var HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 var URL = 'http://userscripts.org/scripts/show/8551'
-var VERSION = '0.0.17'
+var VERSION = '0.0.18'
 var DEBUG_MODE = false
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
@@ -71,10 +71,21 @@ var AutoPager = function(info) {
     this.state = AUTO_START ? 'enable' : 'disable'
     var self = this
     var url = this.getNextURL(info.nextLink, document)
-    this.insertPoint = getFirstElementByXPath(info.insertBefore)
+
+    if (info.insertBefore) {
+        this.insertPoint = getFirstElementByXPath(info.insertBefore)
+    }
+    else {
+        var lastPageElement = getElementsByXPath(info.pageElement).pop()
+        if (lastPageElement) {
+            this.insertPoint = getFirstElementByXPath('following-sibling::node()', lastPageElement)
+        }
+    }
+
     if (!url || !this.insertPoint) {
         return
     }
+
     this.is_apply_filters = false
     this.requestURL = url
     this.loadedURLs = {}
