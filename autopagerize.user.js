@@ -6,7 +6,7 @@
 // ==/UserScript==
 //
 // auther:  youhei
-// varsion: 0.0.4(2007.1.17 06:39:19)
+// version: 0.0.5 2007.1.24 03:29:48
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -17,12 +17,13 @@
 // http://www.gnu.org/copyleft/gpl.html
 //
 (function() {
-    var DEBUG_MODE = false
-
     var HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 
+    var DEBUG_MODE = false
+    var DEFAULT_STATE = 'enable'
+    var CACHE_EXPIRE = 24 * 60 * 60 * 1000
     var SITEINFO_IMPORT_URLS = [
-        // 'http://swdyh.infogami.com/autopagerize',
+        'http://swdyh.infogami.com/autopagerize',
     ]
     var SITEINFO = [
         {
@@ -32,55 +33,13 @@
             pageElement: '//div[2]',
             remainHeight: 800
         },
-        {
-            url:          'http://del.icio.us/*',
-            nextLink:     '//a[@accesskey="e"]',
-            insertBefore: 'id("bottom")',
-            pageElement:  'id("main")',
-            remainHeight: 1200
-        },
-        {
-            url:          'http://search.yahoo.co.jp/search*',
-            nextLink:     'id("yschpg")/p/big[last()]/a',
-            insertBefore: 'id("yschpg")',
-            pageElement:  'id("yschweb")',
-            remainHeight: 800
-        },
-        {
-            url:          'http://search.auctions.yahoo.co.jp/*',
-            nextLink:     '//td[@align="right" and @width="1%"]/small/b[last()]/a',
-            insertBefore: '//table[position()=11]',
-            pageElement:  '//table[position()=7]',
-            remainHeight: 1200
-        },
-        {
-            url:          'http://up.nm78.com/thumb',
-            nextLink:     '//p[@class="menu"]/a[last()]',
-            insertBefore: '//div[@class="banner_top"][last()]',
-            pageElement:  '//table[@class="thumb"]',
-            remainHeight: 800
-        },
-        {
-            url:          'http://d.hatena.ne.jp/swdyh/',
-            nextLink:     '//div[@class="calendar"]//a',
-            insertBefore: 'id("f")',
-            pageElement:  '//div[@class="hatena-body"]',
-            remainHeight: 1000
-        },
-        {
-            url:          'http://www.nicovideo.jp/',
-            nextLink:     '//table[position()=3]/tbody/tr/td/div[position()=2]/p[last()]/a[last()]',
-            insertBefore: '//table[position()=3]/tbody/tr/td/div[position()=3]',
-            pageElement:  '//table[position()=3]/tbody/tr/td/table',
-            remainHeight: 1500
-        },
         /* template
         {
             url:          '',
             nextLink:     '',
             insertBefore: '',
             pageElement:  '',
-            remainHeight: 1000
+            remainHeight: 500
         },
         */
     ]
@@ -96,16 +55,17 @@
         }
         this.requestURL = url
         this.loadedURLs = []
-        this.toggle = function() {ap.stateToggle.apply(ap)}
+        var toggle = function() {ap.stateToggle.apply(ap)}
+        this.toggle = toggle
+        GM_registerMenuCommand('AutoPagerize - on/off', toggle)
         this.scroll = function() {ap.onScroll.apply(ap)}
         document.body.addEventListener("dblclick", this.toggle, true)
         window.addEventListener("scroll", this.scroll, true)
-
-
         this.initMessage('AutoPager')
     }
     AutoPager.prototype.onScroll = function() {
-        var remain = document.documentElement.scrollHeight - window.scrollY
+        var remain = document.documentElement.scrollHeight -
+            window.innerHeight - window.scrollY
         if (this.state == 'enable' && remain < this.info.remainHeight) {
               this.request()
         }
@@ -220,7 +180,7 @@
         }, 1500)
     }
 
-    var infoParser = function(str) {
+    var parseInfo = function(str) {
         var lines = str.split(/\r\n|\r|\n/)
         var re = /(^[^:]*?):(.*)$/
         var strip = function(str) {
@@ -245,40 +205,75 @@
         }
         return isValid(info) ? info : null
     }
+    var launchAutoPager = function(list) {
+        for (var i = 0; i < list.length; i++) {
+            if (location.href.match(list[i].url)) {
+                ap = new AutoPager(list[i], DEFAULT_STATE)
+                return true
+            }
+        }
+        return false
+    }
+    var clearCache = function() {
+        GM_setValue('cacheInfo', '')
+    }
 
     // initialize
+    GM_registerMenuCommand('AutoPagerize - clear cache', clearCache)
     var ap = null
-    var state = 'enable'
-    for (var i = 0; i < SITEINFO.length; i++) {
-        if (location.href.match(SITEINFO[i].url)) {
-            ap = new AutoPager(SITEINFO[i], state)
+    if (launchAutoPager(SITEINFO)) {
+        return
+    }
+    var cacheInfo = eval(GM_getValue('cacheInfo')) || {}
+    var callback = function(res, url) {
+        if (ap) {
             return
+        }
+        var hdoc = createHTMLDocumentByString(res.responseText)
+        var textareas = getElementsByXPath(
+            '//textarea[@class="autopagerize_data"]', hdoc)
+        if (!textareas) {
+            return
+        }
+        var info = []
+        var matched
+        textareas.forEach(function(textarea) {
+            var d = parseInfo(textarea.value)
+            if (d) {
+                info.push(d)
+                if (!matched && location.href.match(d.url)) {
+                    matched = d
+                }
+            }
+        })
+        var now = new Date()
+        cacheInfo[url] = {
+            url: url,
+            expire: new Date(now.getTime() + CACHE_EXPIRE),
+            info: info
+        }
+        GM_setValue('cacheInfo', cacheInfo.toSource())
+        if (matched) {
+            ap = new AutoPager(matched, DEFAULT_STATE)
         }
     }
     for (var i = 0; i < SITEINFO_IMPORT_URLS.length; i++) {
         if (ap) {
             return
         }
-        var callback = function(res) {
-            if (ap) {
+        var url = SITEINFO_IMPORT_URLS[i]
+        if (cacheInfo[url] && cacheInfo[url].expire > new Date()) {
+            if (launchAutoPager(cacheInfo[url].info)) {
                 return
             }
-            var hdoc = createHTMLDocumentByString(res.responseText)
-            var list = getElementsByXPath(
-                '//textarea[@class="autopagerize_data"]', hdoc)
-            if (list) {
-                for (var j = 0; j < list.length; j++) {
-                    var info = infoParser(list[j].value)
-                    if (info && location.href.match(info.url)) {
-                        ap = new AutoPager(info, state)
-                    }
-                }
+            else {
+                continue
             }
         }
         var opt = {
             method: 'get',
-            url: SITEINFO_IMPORT_URLS[i],
-            onload: callback,
+            url: url,
+            onload: function(res){callback(res, url)},
         }
         GM_xmlhttpRequest(opt)
     }
