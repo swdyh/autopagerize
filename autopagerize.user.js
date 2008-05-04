@@ -6,7 +6,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.26 2008-03-30T00:12:14+09:00
+// version: 0.0.27 2008-04-16T16:25:28+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -23,15 +23,14 @@
 
 var HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 var URL = 'http://userscripts.org/scripts/show/8551'
-var VERSION = '0.0.26'
+var VERSION = '0.0.27'
 var DEBUG = false
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
 var BASE_REMAIN_HEIGHT = 400
 var FORCE_TARGET_WINDOW = true
 var SITEINFO_IMPORT_URLS = [
-    'http://swdyh.infogami.com/autopagerize',
-    // 'http://userjs.oh.land.to/pagerization/convert.php?file=siteinfo.v5',
+    'http://wedata.net/databases/AutoPagerize/items.json',
 ]
 var COLOR = {
     on: '#0f0',
@@ -57,6 +56,12 @@ var SITEINFO = [
         exampleUrl:   '',
     },
     */
+    {
+        url:          'http://f.hatena.ne.jp/model/',
+        nextLink:     '//a[text()="next>"]',
+        pageElement:  '//*[@class="fotolist" or @class="modellist"]',
+        exampleUrl:   'http://f.hatena.ne.jp/model/COOLPIX%20P50',
+    },
 ]
 var MICROFORMAT = {
     url:          '.*',
@@ -414,20 +419,26 @@ var getCacheCallback = function(res, url) {
         return getCacheErrorCallback(url)
     }
 
-    var info = []
-    var matched = false
-    var hdoc = createHTMLDocumentByString(res.responseText)
-    var textareas = getElementsByXPath(
-        '//*[@class="autopagerize_data"]', hdoc)
-    textareas.forEach(function(textarea) {
-        var d = parseInfo(textarea.value)
-        if (d) {
-            info.push(d)
-            if (!matched && location.href.match(d.url)) {
-                matched = d
+    var info
+    try {
+        info = eval(res.responseText).map(function(i) { return i.data })
+    }
+    catch(e) {
+        info = []
+        var matched = false
+        var hdoc = createHTMLDocumentByString(res.responseText)
+        var textareas = getElementsByXPath(
+            '//*[@class="autopagerize_data"]', hdoc)
+        textareas.forEach(function(textarea) {
+            var d = parseInfo(textarea.value)
+            if (d) {
+                info.push(d)
+                if (!matched && location.href.match(d.url)) {
+                    matched = d
+                }
             }
-        }
-    })
+        })
+    }
     if (info.length > 0) {
         cacheInfo[url] = {
             url: url,
@@ -435,9 +446,10 @@ var getCacheCallback = function(res, url) {
             info: info
         }
         GM_setValue('cacheInfo', cacheInfo.toSource())
-        if (!ap && matched) {
-            ap = new AutoPager(matched)
-        }
+        launchAutoPager(info)
+    }
+    else {
+        getCacheErrorCallback(url)
     }
 }
 var getCacheErrorCallback = function(url) {
