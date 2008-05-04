@@ -6,7 +6,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.27 2008-04-16T16:25:28+09:00
+// version: 0.0.28 2008-04-16T18:48:26+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -23,7 +23,7 @@
 
 var HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 var URL = 'http://userscripts.org/scripts/show/8551'
-var VERSION = '0.0.27'
+var VERSION = '0.0.28'
 var DEBUG = false
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
@@ -56,12 +56,6 @@ var SITEINFO = [
         exampleUrl:   '',
     },
     */
-    {
-        url:          'http://f.hatena.ne.jp/model/',
-        nextLink:     '//a[text()="next>"]',
-        pageElement:  '//*[@class="fotolist" or @class="modellist"]',
-        exampleUrl:   'http://f.hatena.ne.jp/model/COOLPIX%20P50',
-    },
 ]
 var MICROFORMAT = {
     url:          '.*',
@@ -81,7 +75,6 @@ var AutoPager = function(info) {
         debug("getNextURL returns null.", info.nextLink)
         return
     }
-        debug("fjoiwajfoiajp.", info.nextLink)
     if (info.insertBefore) {
         this.insertPoint = getFirstElementByXPath(info.insertBefore)
     }
