@@ -6,7 +6,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.24 2008-02-25T01:19:05+09:00
+// version: 0.0.25 2008-03-15T02:29:03+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -23,7 +23,7 @@
 
 var HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 var URL = 'http://userscripts.org/scripts/show/8551'
-var VERSION = '0.0.24'
+var VERSION = '0.0.25'
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
 var BASE_REMAIN_HEIGHT = 400
@@ -209,6 +209,10 @@ AutoPager.prototype.request = function() {
     }
     if (!this.requestURL.match(/^http:/)) {
         this.requestURL = pathToURL(location.href, this.requestURL)
+    }
+    if (!isSameDomain(this.requestURL)) {
+        this.error()
+        return
     }
     this.lastRequestURL = this.requestURL
     var self = this
@@ -555,3 +559,6 @@ function pathToURL(url, path) {
     return s + path
 }
 
+function isSameDomain(url) {
+    return location.host == url.split('/')[2]
+}
