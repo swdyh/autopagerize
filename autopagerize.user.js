@@ -6,7 +6,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.19 2007-12-19T18:26:22+09:00
+// version: 0.0.20 2008-01-30T00:40:15+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -17,13 +17,13 @@
 // http://www.gnu.org/copyleft/gpl.html
 //
 
-if (window != window.parent) {
-    return
-}
+//if (window != window.parent) {
+//    return
+//}
 
 var HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 var URL = 'http://userscripts.org/scripts/show/8551'
-var VERSION = '0.0.19'
+var VERSION = '0.0.20'
 var DEBUG_MODE = false
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
@@ -78,7 +78,8 @@ var AutoPager = function(info) {
     else {
         var lastPageElement = getElementsByXPath(info.pageElement).pop()
         if (lastPageElement) {
-            this.insertPoint = getFirstElementByXPath('following-sibling::node()', lastPageElement)
+            this.insertPoint = lastPageElement.nextSibling ||
+                lastPageElement.parentNode.appendChild(document.createTextNode(' '))
         }
     }
 
@@ -219,9 +220,8 @@ AutoPager.prototype.request = function() {
             self.requestLoad.apply(self, [res])
         }}
     this.showLoading(true)
-    if (!opt.url.match(/^http/)) {
-        opt.url = location.protocol + '//'+ location.host +
-                  location.port + opt.url
+    if (!opt.url.match(/^http:/)) {
+        opt.url = pathToURL(location.href, opt.url);
     }
     GM_xmlhttpRequest(opt)
 }
@@ -257,7 +257,7 @@ AutoPager.prototype.requestLoad = function(res) {
         return
     }
     this.loadedURLs[this.requestURL] = true
-    this.addPage(htmlDoc, page)
+    page = this.addPage(htmlDoc, page)
     AutoPager.apply_filters(page)
     this.requestURL = url
     this.showLoading(false)
@@ -274,9 +274,10 @@ AutoPager.prototype.addPage = function(htmlDoc, page) {
     this.insertPoint.parentNode.insertBefore(p, this.insertPoint)
     p.innerHTML = 'page: <a class="autopagerize_link" href="' +
         this.requestURL + '">' + (++this.pageNum) + '</a>'
-    page.forEach(function(i) {
+    return page.map(function(i) {
         var pe = document.importNode(i, true)
         self.insertPoint.parentNode.insertBefore(pe, self.insertPoint)
+        return pe
     })
 }
 
@@ -547,3 +548,14 @@ function getScrollHeight() {
     return Math.max(document.documentElement.scrollHeight,
                                 document.body.scrollHeight)
 }
+
+function pathToURL(url, path) {
+    var s
+    if (path.match(/^\//)) { // absolute?
+        s = url.replace(/^([a-z]+:\/\/.*?)\/.*$/, '$1')
+    } else {
+        s = url.replace(/^(.*\/).*$/, '$1')
+    }
+    return s + path
+}
+
