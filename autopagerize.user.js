@@ -6,7 +6,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.21 2008-01-30T01:02:41+09:00
+// version: 0.0.22 2008-02-09T00:34:49+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -23,16 +23,14 @@
 
 var HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 var URL = 'http://userscripts.org/scripts/show/8551'
-var VERSION = '0.0.20'
-var DEBUG_MODE = false
+var VERSION = '0.0.22'
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
 var BASE_REMAIN_HEIGHT = 400
 var FORCE_TARGET_WINDOW = true
-var TARGET_WINDOW_NAME = '_blank'
 var SITEINFO_IMPORT_URLS = [
     'http://swdyh.infogami.com/autopagerize',
-    'http://userjs.oh.land.to/pagerization/convert.php?file=siteinfo.v5',
+    // 'http://userjs.oh.land.to/pagerization/convert.php?file=siteinfo.v5',
 ]
 var COLOR = {
     on: '#0f0',
@@ -44,18 +42,18 @@ var COLOR = {
 var SITEINFO = [
     /* sample
     {
-        url:          'http://www.google.*?/search',
-        nextLink:     'id("navbar")/table/tbody/tr/td[last()]/a',
-        insertBefore: 'id("navbar")',
-        pageElement:  '//div[2]',
+        url:          'http://(.*).google.+/(search).+',
+        nextLink:     'id("navbar")//td[last()]/a',
+        pageElement:  '//div[@id="res"]/div',
+        exampleUrl:   'http://www.google.com/search?q=nsIObserver',
     },
     */
     /* template
     {
         url:          '',
         nextLink:     '',
-        insertBefore: '',
         pageElement:  '',
+        exampleUrl:   '',
     },
     */
 ]
@@ -75,7 +73,8 @@ var AutoPager = function(info) {
     if (info.insertBefore) {
         this.insertPoint = getFirstElementByXPath(info.insertBefore)
     }
-    else {
+
+    if (!this.insertPoint) {
         var lastPageElement = getElementsByXPath(info.pageElement).pop()
         if (lastPageElement) {
             this.insertPoint = lastPageElement.nextSibling ||
@@ -87,7 +86,6 @@ var AutoPager = function(info) {
         return
     }
 
-    this.is_apply_filters = false
     this.requestURL = url
     this.loadedURLs = {}
     var toggle = function() {self.stateToggle()}
@@ -208,22 +206,26 @@ AutoPager.prototype.request = function() {
     if (!this.requestURL || this.lastRequestURL == this.requestURL) {
         return
     }
+    if (!this.requestURL.match(/^http:/)) {
+        this.requestURL = pathToURL(location.href, opt.url)
+    }
     this.lastRequestURL = this.requestURL
     var self = this
-    var mime = 'text/html; charset=' + document.characterSet
-    var opt = {
-        method: 'get',
-        url: this.requestURL,
-        overrideMimeType: mime,
-        onerror: this.error,
-        onload: function(res){
-            self.requestLoad.apply(self, [res])
-        }}
-    this.showLoading(true)
-    if (!opt.url.match(/^http:/)) {
-        opt.url = pathToURL(location.href, opt.url);
+    var req = new XMLHttpRequest()
+    req.open('GET', this.requestURL, true)
+    req.overrideMimeType('text/html; charset=' + document.characterSet)
+    req.onreadystatechange = function(aEvt) {
+        if (req.readyState == 4) {
+            if (req.status <= 200 && req.status < 300) {
+                self.requestLoad.apply(self, [req])
+            }
+            else {
+                self.error.apply(self, [req])
+            }
+        }
     }
-    GM_xmlhttpRequest(opt)
+    req.send(null)
+    this.showLoading(true)
 }
 
 AutoPager.prototype.showLoading = function(sw) {
@@ -236,13 +238,11 @@ AutoPager.prototype.showLoading = function(sw) {
 }
 
 AutoPager.prototype.requestLoad = function(res) {
-    if (res.status < 200 || res.status > 300) {
-        log(res.status)
-        this.error()
-        return
-    }
     var t = res.responseText
     var htmlDoc = createHTMLDocumentByString(t)
+    AutoPager.documentFilters.forEach(function(i) {
+        i(htmlDoc, this.requestURL, this.info)
+    }, this)
     try {
         var page = getElementsByXPath(this.info.pageElement, htmlDoc)
         var url = this.getNextURL(this.info.nextLink, htmlDoc)
@@ -258,7 +258,9 @@ AutoPager.prototype.requestLoad = function(res) {
     }
     this.loadedURLs[this.requestURL] = true
     page = this.addPage(htmlDoc, page)
-    AutoPager.apply_filters(page)
+    AutoPager.filters.forEach(function(i) {
+        i(page)
+    })
     this.requestURL = url
     this.showLoading(false)
     if (!url) {
@@ -323,16 +325,8 @@ AutoPager.prototype.error = function() {
     window.removeEventListener('scroll', this.scroll, false)
 }
 
+AutoPager.documentFilters = []
 AutoPager.filters = []
-AutoPager.apply_filters = function(page) {
-    if (AutoPager.filters.length > 0) {
-        AutoPager.filters.forEach(function(i) {
-            if (typeof(i) == 'function') {
-                i(page)
-            }
-        })
-    }
-}
 
 var parseInfo = function(str) {
     var lines = str.split(/\r\n|\r|\n/)
@@ -363,6 +357,7 @@ var launchAutoPager = function(list) {
             if (!ap && location.href.match(list[i].url) &&
                 getFirstElementByXPath(list[i].nextLink)) {
                     ap = new AutoPager(list[i])
+                    return
                 }
         }
         catch(e) {
@@ -370,10 +365,12 @@ var launchAutoPager = function(list) {
             continue
         }
     }
-    if (!ap && getFirstElementByXPath(MICROFORMAT.nextLink) &&
-        getFirstElementByXPath(MICROFORMAT.insertBefore)) {
-        ap = new AutoPager(MICROFORMAT)
+    try {
+        if (!ap && getFirstElementByXPath(MICROFORMAT.nextLink)) {
+            ap = new AutoPager(MICROFORMAT)
+        }
     }
+    catch(e) {}
 }
 var clearCache = function() {
     GM_setValue('cacheInfo', '')
@@ -390,7 +387,7 @@ var getCacheCallback = function(res, url) {
     var matched = false
     var hdoc = createHTMLDocumentByString(res.responseText)
     var textareas = getElementsByXPath(
-        '//*[@class="autopagerize_data"]', hdoc) || []
+        '//*[@class="autopagerize_data"]', hdoc)
     textareas.forEach(function(textarea) {
         var d = parseInfo(textarea.value)
         if (d) {
@@ -413,30 +410,39 @@ var getCacheCallback = function(res, url) {
     }
 }
 var getCacheErrorCallback = function(url) {
+    var expire = new Date(new Date().getTime() + CACHE_EXPIRE)
     if (cacheInfo[url]) {
-        cacheInfo[url].expire =
-            new Date(new Date().getTime() + CACHE_EXPIRE)
-        GM_setValue('cacheInfo', cacheInfo.toSource())
+        cacheInfo[url].expire = expire
         launchAutoPager(cacheInfo[url].info)
     }
+    else {
+        cacheInfo[url] = {
+            url: url,
+            expire: expire,
+            info: []
+        }
+    }
+    GM_setValue('cacheInfo', cacheInfo.toSource())
 }
 
 if (FORCE_TARGET_WINDOW) {
-    AutoPager.filters.push(function(pageElements) {
-        pageElements.forEach(function(pageElement) {
-            var anchers = getElementsByXPath('descendant-or-self::a', pageElement) || []
-            anchers.forEach(function(i) {
-                if (i.className.indexOf('autopagerize_link') < 0) {
-                    i.target = TARGET_WINDOW_NAME
-                }
-            })
+    var setTargetBlank = function(doc) {
+        var anchers = getElementsByXPath('descendant-or-self::a', doc)
+        anchers.forEach(function(i) {
+            if (i.className.indexOf('autopagerize_link') < 0) {
+                i.target = '_blank'
+            }
         })
-    })
+    }
+    AutoPager.documentFilters.push(setTargetBlank)
 }
 if (typeof(window.AutoPagerize) == 'undefined') {
     window.AutoPagerize = {}
     window.AutoPagerize.addFilter = function(f) {
         AutoPager.filters.push(f)
+    }
+    window.AutoPagerize.addDocumentFilter = function(f) {
+        AutoPager.documentFilters.push(f)
     }
 }
 var ap = null
@@ -477,7 +483,7 @@ function getElementsByXPath(xpath, node) {
     for (var i = 0; i < nodesSnapshot.snapshotLength; i++) {
         data.push(nodesSnapshot.snapshotItem(i))
     }
-    return (data.length >= 1) ? data : null
+    return data
 }
 
 function getFirstElementByXPath(xpath, node) {
@@ -485,16 +491,6 @@ function getFirstElementByXPath(xpath, node) {
     var doc = node.ownerDocument ? node.ownerDocument : node
     var result = doc.evaluate(xpath, node, null,
         XPathResult.FIRST_ORDERED_NODE_TYPE, null)
-    // for search element
-    if (DEBUG_MODE) {
-        var rule = [".match{border: 1px solid #f00}\n",
-                    ".match:after{content:'", xpath, "'}\n"].join('')
-        GM_addStyle(rule)
-        if (result.singleNodeValue && result.singleNodeValue.nodeType == 1) {
-            result.singleNodeValue.className =
-                result.singleNodeValue.className + ' match'
-        }
-    }
     return result.singleNodeValue ? result.singleNodeValue : null
 }
 
