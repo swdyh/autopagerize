@@ -6,7 +6,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.25 2008-03-15T02:29:03+09:00
+// version: 0.0.26 2008-03-30T00:12:14+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -23,7 +23,8 @@
 
 var HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 var URL = 'http://userscripts.org/scripts/show/8551'
-var VERSION = '0.0.25'
+var VERSION = '0.0.26'
+var DEBUG = false
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
 var BASE_REMAIN_HEIGHT = 400
@@ -71,6 +72,11 @@ var AutoPager = function(info) {
     var self = this
     var url = this.getNextURL(info.nextLink, document)
 
+    if ( !url ) {
+        debug("getNextURL returns null.", info.nextLink)
+        return
+    }
+        debug("fjoiwajfoiajp.", info.nextLink)
     if (info.insertBefore) {
         this.insertPoint = getFirstElementByXPath(info.insertBefore)
     }
@@ -83,7 +89,8 @@ var AutoPager = function(info) {
         }
     }
 
-    if (!url || !this.insertPoint) {
+    if (!this.insertPoint) {
+        debug("insertPoint not found.", lastPageElement, info.pageElement)
         return
     }
 
@@ -207,9 +214,6 @@ AutoPager.prototype.request = function() {
     if (!this.requestURL || this.lastRequestURL == this.requestURL) {
         return
     }
-    if (!this.requestURL.match(/^http:/)) {
-        this.requestURL = pathToURL(location.href, this.requestURL)
-    }
     if (!isSameDomain(this.requestURL)) {
         this.error()
         return
@@ -254,10 +258,19 @@ AutoPager.prototype.requestLoad = function(res) {
         this.error()
         return
     }
-    if (page.length < 1 || this.loadedURLs[this.requestURL]) {
+
+    if (!page || page.length < 1 ) {
+        debug('pageElement not found.' , this.info.pageElement)
         this.terminate()
         return
     }
+
+    if (this.loadedURLs[this.requestURL]) {
+        debug('page is already loaded.', this.requestURL, this.info.nextLink)
+        this.terminate()
+        return
+    }
+
     this.loadedURLs[this.requestURL] = true
     page = this.addPage(htmlDoc, page)
     AutoPager.filters.forEach(function(i) {
@@ -267,6 +280,7 @@ AutoPager.prototype.requestLoad = function(res) {
     this.showLoading(false)
     this.onScroll()
     if (!url) {
+        debug('nextLink not found.', this.info.nextLink, htmlDoc)
         this.terminate()
     }
 }
@@ -310,7 +324,11 @@ AutoPager.prototype.initIcon = function() {
 AutoPager.prototype.getNextURL = function(xpath, doc) {
     var next = getFirstElementByXPath(xpath, doc)
     if (next) {
-        return next.href || next.action || next.value
+        var url = next.href || next.action || next.value
+        if (!url.match(/^http:/)) {
+            url = pathToURL(url)
+        }
+        return url
     }
 }
 
@@ -360,9 +378,21 @@ var launchAutoPager = function(list) {
             if (ap) {
                 return
             }
-            else if(location.href.match(list[i].url) &&
-                    getFirstElementByXPath(list[i].nextLink) &&
-                    getFirstElementByXPath(list[i].pageElement)) {
+            else if (!location.href.match(list[i].url)) {
+            }
+            else if (!getFirstElementByXPath(list[i].nextLink)) {
+                // FIXME microformats case detection.
+                // limiting greater than 12 to filter microformats like SITEINFOs.
+                if (list[i].url.length > 12 ) {
+                    debug("nextLink not found.", list[i].nextLink)
+                }
+            }
+            else if (!getFirstElementByXPath(list[i].pageElement)) {
+                if (list[i].url.length > 12 ) {
+                    debug("pageElement not found.", list[i].pageElement)
+                }
+            }
+            else {
                 ap = new AutoPager(list[i])
                 return
             }
@@ -475,8 +505,13 @@ function createHTMLDocumentByString(str) {
     var html = str.replace(/<!DOCTYPE.*?>/, '').replace(/<html.*?>/, '').replace(/<\/html>.*/, '')
     var htmlDoc  = document.implementation.createDocument(null, 'html', null)
     var fragment = createDocumentFragmentByString(html)
-    htmlDoc.documentElement.appendChild(htmlDoc.importNode(fragment, true))
-    return htmlDoc
+    try {
+        fragment = htmlDoc.adoptNode(fragment)
+    } catch(e) {
+        fragment = htmlDoc.importNode(fragment, true)
+    }
+    htmlDoc.documentElement.appendChild(fragment)
+   return htmlDoc
 }
 
 function getElementsByXPath(xpath, node) {
@@ -511,6 +546,12 @@ function log(message) {
     }
     else {
         GM_log(message)
+    }
+}
+
+function debug() {
+    if ( typeof DEBUG != 'undefined' && DEBUG ) {
+        console.log.apply(this, arguments)
     }
 }
 
@@ -549,14 +590,10 @@ function getScrollHeight() {
                                 document.body.scrollHeight)
 }
 
-function pathToURL(url, path) {
-    var s
-    if (path.match(/^\//)) { // absolute?
-        s = url.replace(/^([a-z]+:\/\/.*?)\/.*$/, '$1')
-    } else {
-        s = url.replace(/^(.*\/).*$/, '$1')
-    }
-    return s + path
+function pathToURL(path) {
+    var link = document.createElement('a')
+    link.href = path
+    return link.href
 }
 
 function isSameDomain(url) {
