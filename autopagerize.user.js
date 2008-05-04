@@ -288,8 +288,17 @@ AutoPager.prototype.addPage = function(htmlDoc, page) {
     var hr = document.createElementNS(HTML_NAMESPACE, 'hr')
     var p = document.createElementNS(HTML_NAMESPACE, 'p')
     var self = this
-    this.insertPoint.parentNode.insertBefore(hr, this.insertPoint)
-    this.insertPoint.parentNode.insertBefore(p, this.insertPoint)
+
+    if(page[0] && page[0].tagName == 'TR') {
+      var tr = document.createElementNS(HTML_NAMESPACE, 'tr');
+      tr.appendChild(hr);
+      tr.appendChild(p);
+      this.insertPoint.parentNode.insertBefore(tr, this.insertPoint)
+    } else {
+      this.insertPoint.parentNode.insertBefore(hr, this.insertPoint)
+      this.insertPoint.parentNode.insertBefore(p, this.insertPoint)
+    }
+
     p.innerHTML = 'page: <a class="autopagerize_link" href="' +
         this.requestURL + '">' + (++this.pageNum) + '</a>'
     return page.map(function(i) {
