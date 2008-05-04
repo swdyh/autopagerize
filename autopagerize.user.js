@@ -6,7 +6,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.20 2008-01-30T00:40:15+09:00
+// version: 0.0.21 2008-01-30T01:02:41+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -346,11 +346,10 @@ var parseInfo = function(str) {
             info[RegExp.$1] = strip(RegExp.$2)
         }
     }
-    info.remainHeight = parseInt(info.remainHeight)
     var isValid = function(info) {
-        var infoProp = ['nextLink', 'insertBefore', 'pageElement']
+        var infoProp = ['url', 'nextLink', 'pageElement']
         for (var i = 0; i < infoProp.length; i++) {
-            if (!infoProp[i]) {
+            if (!info[infoProp[i]]) {
                 return false
             }
         }
@@ -425,7 +424,7 @@ var getCacheErrorCallback = function(url) {
 if (FORCE_TARGET_WINDOW) {
     AutoPager.filters.push(function(pageElements) {
         pageElements.forEach(function(pageElement) {
-            var anchers = getElementsByXPath('descendant::a', pageElement) || []
+            var anchers = getElementsByXPath('descendant-or-self::a', pageElement) || []
             anchers.forEach(function(i) {
                 if (i.className.indexOf('autopagerize_link') < 0) {
                     i.target = TARGET_WINDOW_NAME
