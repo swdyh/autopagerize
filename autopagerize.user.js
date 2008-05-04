@@ -289,7 +289,7 @@ AutoPager.prototype.addPage = function(htmlDoc, page) {
     var p = document.createElementNS(HTML_NAMESPACE, 'p')
     var self = this
 
-    if(page[0] && page[0].tagName == 'TR') {
+    if (page[0] && page[0].tagName == 'TR') {
       var tr = document.createElementNS(HTML_NAMESPACE, 'tr');
       tr.appendChild(hr);
       tr.appendChild(p);
