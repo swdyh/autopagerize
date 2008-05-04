@@ -6,7 +6,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.22 2008-02-09T00:34:49+09:00
+// version: 0.0.23 2008-02-15T19:49:31+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -23,7 +23,7 @@
 
 var HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 var URL = 'http://userscripts.org/scripts/show/8551'
-var VERSION = '0.0.22'
+var VERSION = '0.0.23'
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
 var BASE_REMAIN_HEIGHT = 400
@@ -207,25 +207,22 @@ AutoPager.prototype.request = function() {
         return
     }
     if (!this.requestURL.match(/^http:/)) {
-        this.requestURL = pathToURL(location.href, opt.url)
+        this.requestURL = pathToURL(location.href, this.requestURL)
     }
     this.lastRequestURL = this.requestURL
     var self = this
-    var req = new XMLHttpRequest()
-    req.open('GET', this.requestURL, true)
-    req.overrideMimeType('text/html; charset=' + document.characterSet)
-    req.onreadystatechange = function(aEvt) {
-        if (req.readyState == 4) {
-            if (req.status <= 200 && req.status < 300) {
-                self.requestLoad.apply(self, [req])
-            }
-            else {
-                self.error.apply(self, [req])
-            }
+    var mime = 'text/html; charset=' + document.characterSet
+    var opt = {
+        method: 'get',
+        url: this.requestURL,
+        overrideMimeType: mime,
+        onerror: this.error,
+        onload: function(res){
+            self.requestLoad.apply(self, [res])
         }
     }
-    req.send(null)
     this.showLoading(true)
+    GM_xmlhttpRequest(opt)
 }
 
 AutoPager.prototype.showLoading = function(sw) {
@@ -252,7 +249,7 @@ AutoPager.prototype.requestLoad = function(res) {
         this.error()
         return
     }
-    if (!page || this.loadedURLs[this.requestURL]) {
+    if (page.length < 1 || this.loadedURLs[this.requestURL]) {
         this.terminate()
         return
     }
@@ -429,7 +426,9 @@ if (FORCE_TARGET_WINDOW) {
     var setTargetBlank = function(doc) {
         var anchers = getElementsByXPath('descendant-or-self::a', doc)
         anchers.forEach(function(i) {
-            if (i.className.indexOf('autopagerize_link') < 0) {
+            if (i.getAttribute('href') &&
+                !i.getAttribute('href').match(/^#/) &&
+                i.className.indexOf('autopagerize_link') < 0) {
                 i.target = '_blank'
             }
         })
@@ -445,6 +444,7 @@ if (typeof(window.AutoPagerize) == 'undefined') {
         AutoPager.documentFilters.push(f)
     }
 }
+
 var ap = null
 launchAutoPager(SITEINFO)
 GM_registerMenuCommand('AutoPagerize - clear cache', clearCache)
