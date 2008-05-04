@@ -6,7 +6,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.23 2008-02-15T19:49:31+09:00
+// version: 0.0.24 2008-02-25T01:19:05+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -23,7 +23,7 @@
 
 var HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 var URL = 'http://userscripts.org/scripts/show/8551'
-var VERSION = '0.0.23'
+var VERSION = '0.0.24'
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
 var BASE_REMAIN_HEIGHT = 400
@@ -58,6 +58,7 @@ var SITEINFO = [
     */
 ]
 var MICROFORMAT = {
+    url:          '.*',
     nextLink:     '//a[@rel="next"] | //link[@rel="next"]',
     insertBefore: '//*[contains(@class, "autopagerize_insert_before")]',
     pageElement:  '//*[contains(@class, "autopagerize_page_element")]',
@@ -260,6 +261,7 @@ AutoPager.prototype.requestLoad = function(res) {
     })
     this.requestURL = url
     this.showLoading(false)
+    this.onScroll()
     if (!url) {
         this.terminate()
     }
@@ -351,23 +353,21 @@ var parseInfo = function(str) {
 var launchAutoPager = function(list) {
     for (var i = 0; i < list.length; i++) {
         try {
-            if (!ap && location.href.match(list[i].url) &&
-                getFirstElementByXPath(list[i].nextLink)) {
-                    ap = new AutoPager(list[i])
-                    return
-                }
+            if (ap) {
+                return
+            }
+            else if(location.href.match(list[i].url) &&
+                    getFirstElementByXPath(list[i].nextLink) &&
+                    getFirstElementByXPath(list[i].pageElement)) {
+                ap = new AutoPager(list[i])
+                return
+            }
         }
         catch(e) {
             log(e)
             continue
         }
     }
-    try {
-        if (!ap && getFirstElementByXPath(MICROFORMAT.nextLink)) {
-            ap = new AutoPager(MICROFORMAT)
-        }
-    }
-    catch(e) {}
 }
 var clearCache = function() {
     GM_setValue('cacheInfo', '')
@@ -445,9 +445,9 @@ if (typeof(window.AutoPagerize) == 'undefined') {
     }
 }
 
+GM_registerMenuCommand('AutoPagerize - clear cache', clearCache)
 var ap = null
 launchAutoPager(SITEINFO)
-GM_registerMenuCommand('AutoPagerize - clear cache', clearCache)
 var cacheInfo = getCache()
 SITEINFO_IMPORT_URLS.forEach(function(i) {
     if (!cacheInfo[i] || cacheInfo[i].expire < new Date()) {
@@ -463,6 +463,7 @@ SITEINFO_IMPORT_URLS.forEach(function(i) {
         launchAutoPager(cacheInfo[i].info)
     }
 })
+launchAutoPager([MICROFORMAT])
 return
 
 // utility functions.
