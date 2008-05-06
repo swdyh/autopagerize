@@ -621,6 +621,7 @@ if (FORCE_TARGET_WINDOW) {
         anchers.forEach(function(i) {
             if (i.getAttribute('href') &&
                 !i.getAttribute('href').match(/^#/) &&
+                !i.getAttribute('href').match(/^javascript\:/) &&
                 i.className.indexOf('autopagerize_link') < 0) {
                 i.target = '_blank'
             }
