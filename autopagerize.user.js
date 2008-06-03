@@ -2,7 +2,9 @@
 // @name           AutoPagerize
 // @namespace      http://swdyh.yu.to/
 // @description    loading next page and inserting into current page.
-// @include        *
+// @include        http://*
+// @include        https://*
+// @exclude        https://mail.google.com/*
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
