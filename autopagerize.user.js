@@ -19,10 +19,6 @@
 // http://www.gnu.org/copyleft/gpl.html
 //
 
-//if (window != window.parent) {
-//    return
-//}
-
 var HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 var URL = 'http://userscripts.org/scripts/show/8551'
 var VERSION = '0.0.29'
@@ -215,10 +211,14 @@ AutoPager.prototype.request = function() {
     if (!this.requestURL || this.lastRequestURL == this.requestURL) {
         return
     }
-    if (!isSameDomain(this.requestURL)) {
-        this.error()
-        return
-    }
+
+	if ( !supportsFinalUrl() ) {
+		if (!isSameDomain(this.requestURL)) {
+			this.error()
+			return
+		}
+	}
+
     this.lastRequestURL = this.requestURL
     var self = this
     var mime = 'text/html; charset=' + document.characterSet
@@ -245,6 +245,13 @@ AutoPager.prototype.showLoading = function(sw) {
 }
 
 AutoPager.prototype.requestLoad = function(res) {
+	if ( supportsFinalUrl() ) {
+		if (!isSameDomain(res.finalUrl)) {
+			this.error()
+			return
+		}
+	}
+
     var t = res.responseText
     var htmlDoc = createHTMLDocumentByString(t)
     AutoPager.documentFilters.forEach(function(i) {
@@ -760,4 +767,8 @@ function pathToURL(path) {
 
 function isSameDomain(url) {
     return location.host == url.split('/')[2]
+}
+
+function supportsFinalUrl() {
+    return (GM_getResourceURL)
 }
