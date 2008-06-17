@@ -212,11 +212,8 @@ AutoPager.prototype.request = function() {
         return
     }
 
-	if ( !supportsFinalUrl() ) {
-		if (!isSameDomain(this.requestURL)) {
-			this.error()
-			return
-		}
+	if ( !this.canHandleCrossDomainRequest() ) {
+		return
 	}
 
     this.lastRequestURL = this.requestURL
@@ -245,11 +242,8 @@ AutoPager.prototype.showLoading = function(sw) {
 }
 
 AutoPager.prototype.requestLoad = function(res) {
-	if ( supportsFinalUrl() ) {
-		if (!isSameDomain(res.finalUrl)) {
-			this.error()
-			return
-		}
+	if ( !this.canHandleCrossDomainRequest() ) {
+		return
 	}
 
     var t = res.responseText
@@ -348,6 +342,16 @@ AutoPager.prototype.getNextURL = function(xpath, doc) {
         }
         return url
     }
+}
+
+AutoPager.prototype.canHandleCrossDomainRequest = function(url) {
+	if ( !supportsFinalUrl() ) {
+		if (!isSameDomain(this.requestURL)) {
+			this.error()
+			return false
+		}
+	}
+	return true
 }
 
 AutoPager.prototype.terminate = function() {
@@ -772,3 +776,4 @@ function isSameDomain(url) {
 function supportsFinalUrl() {
     return (GM_getResourceURL)
 }
+
