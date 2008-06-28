@@ -212,9 +212,9 @@ AutoPager.prototype.request = function() {
         return
     }
 
-	if ( !this.canHandleCrossDomainRequest() ) {
-		return
-	}
+    if ( !this.canHandleCrossDomainRequest() ) {
+        return
+    }
 
     this.lastRequestURL = this.requestURL
     var self = this
@@ -242,9 +242,9 @@ AutoPager.prototype.showLoading = function(sw) {
 }
 
 AutoPager.prototype.requestLoad = function(res) {
-	if ( !this.canHandleCrossDomainRequest() ) {
-		return
-	}
+    if ( !this.canHandleCrossDomainRequest() ) {
+        return
+    }
 
     var t = res.responseText
     var htmlDoc = createHTMLDocumentByString(t)
@@ -355,13 +355,13 @@ AutoPager.prototype.getNextURL = function(xpath, doc) {
 }
 
 AutoPager.prototype.canHandleCrossDomainRequest = function(url) {
-	if ( !supportsFinalUrl() ) {
-		if (!isSameDomain(this.requestURL)) {
-			this.error()
-			return false
-		}
-	}
-	return true
+    if ( !supportsFinalUrl() ) {
+        if (!isSameDomain(this.requestURL)) {
+            this.error()
+            return false
+        }
+    }
+    return true
 }
 
 AutoPager.prototype.terminate = function() {
@@ -548,6 +548,12 @@ var parseInfo = function(str) {
     return isValid(info) ? info : null
 }
 var launchAutoPager = function(list) {
+    if (list.length == 0) {
+        return
+    }
+    list = list.filter(function(i) { return ('url' in i) })
+    list.sort(function(a, b) { return (b.url.length - a.url.length) })
+
     for (var i = 0; i < list.length; i++) {
         try {
             if (ap) {
