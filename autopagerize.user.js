@@ -294,7 +294,8 @@ AutoPager.prototype.addPage = function(htmlDoc, page) {
 
     if (page[0] && page[0].tagName == 'TR') {
         var insertParent = this.insertPoint.parentNode
-        var colNodes = getElementsByXPath('child::tr/child::*[self::td or self::th]',insertParent)
+        var colNodes = getElementsByXPath('child::tr[1]/child::*[self::td or self::th]', insertParent)
+
         var colums = 0
         for (var i = 0, l = colNodes.length; i < l; i++) {
             var col = colNodes[i].getAttribute('colspan')
@@ -304,7 +305,7 @@ AutoPager.prototype.addPage = function(htmlDoc, page) {
         // td.appendChild(hr)
         td.appendChild(p)
         var tr = document.createElement('tr')
-        td.setAttribute('colspan',colums)
+        td.setAttribute('colspan', colums)
         tr.appendChild(td)
         insertParent.insertBefore(tr, this.insertPoint)
     }
