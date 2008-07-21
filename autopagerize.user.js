@@ -559,9 +559,6 @@ var launchAutoPager = function(list) {
     if (list.length == 0) {
         return
     }
-    list = list.filter(function(i) { return ('url' in i) })
-    list.sort(function(a, b) { return (b.url.length - a.url.length) })
-
     for (var i = 0; i < list.length; i++) {
         try {
             if (ap) {
@@ -624,6 +621,8 @@ var getCacheCallback = function(res, url) {
         })
     }
     if (info.length > 0) {
+        info = info.filter(function(i) { return ('url' in i) })
+        info.sort(function(a, b) { return (b.url.length - a.url.length) })
         cacheInfo[url] = {
             url: url,
             expire: new Date(new Date().getTime() + CACHE_EXPIRE),
