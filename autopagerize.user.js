@@ -794,12 +794,6 @@ function getScrollHeight() {
                                 document.body.scrollHeight)
 }
 
-function pathToURL(path) {
-    var link = document.createElement('a')
-    link.href = path
-    return link.href
-}
-
 function isSameDomain(url) {
     return location.host == url.split('/')[2]
 }
