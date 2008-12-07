@@ -258,7 +258,7 @@ AutoPager.prototype.requestLoad = function(res) {
     }, this)
     try {
         var page = getElementsByXPath(this.info.pageElement, htmlDoc)
-        var url = this.getNextURL(this.info.nextLink, htmlDoc)
+        var url = this.getNextURL(this.info.nextLink, htmlDoc, this.requestURL)
     }
     catch(e){
         log(e)
@@ -351,14 +351,22 @@ AutoPager.prototype.initIcon = function() {
     this.icon = div
 }
 
-AutoPager.prototype.getNextURL = function(xpath, doc) {
-    var next = getFirstElementByXPath(xpath, doc)
-    if (next) {
-        var url = next.href || next.action || next.value
-        if (!url.match(/^http:/)) {
-            url = pathToURL(url)
+AutoPager.prototype.getNextURL = function(xpath, doc, url) {
+    var nextLink = getFirstElementByXPath(xpath, doc)
+    if (nextLink) {
+        var nextValue = nextLink.href || nextLink.action || nextLink.value
+        if (nextValue.match(/^http:/)) {
+            return nextValue
         }
-        return url
+        else {
+            var base = getFirstElementByXPath('//base', doc)
+            if (base && base.href) {
+                return resolvePath(nextValue, base.href)
+            }
+            else {
+                return resolvePath(nextValue, url || location.href)
+            }
+        }
     }
 }
 
@@ -799,4 +807,14 @@ function isSameDomain(url) {
 function supportsFinalUrl() {
     return (GM_getResourceURL)
 }
+
+function resolvePath(path, base) {
+    var XHTML_NS = "http://www.w3.org/1999/xhtml"
+    var XML_NS   = "http://www.w3.org/XML/1998/namespace"
+    var a = document.createElementNS(XHTML_NS, 'a')
+    a.setAttributeNS(XML_NS, 'xml:base', base)
+    a.href = path
+    return a.href
+}
+
 
