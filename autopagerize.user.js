@@ -5,6 +5,7 @@
 // @include        http://*
 // @include        https://*
 // @exclude        https://mail.google.com/*
+// @exclude        http://b.hatena.ne.jp/*
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
