@@ -361,12 +361,8 @@ AutoPager.prototype.getNextURL = function(xpath, doc, url) {
         }
         else {
             var base = getFirstElementByXPath('//base', doc)
-            if (base && base.href) {
-                return resolvePath(nextValue, base.href)
-            }
-            else {
-                return resolvePath(nextValue, url || location.href)
-            }
+            var u = (base && base.href) ? base.href : (url || location.href)
+            return resolvePath(nextValue, u)
         }
     }
 }
@@ -660,20 +656,26 @@ var getCacheErrorCallback = function(url) {
     GM_setValue('cacheInfo', cacheInfo.toSource())
 }
 
-if (FORCE_TARGET_WINDOW) {
-    var setTargetBlank = function(doc) {
+var linkFilter = function(doc, url) {
+    setTimeout(function() {
         var anchers = getElementsByXPath('descendant-or-self::a', doc)
         anchers.forEach(function(i) {
-            if (i.getAttribute('href') &&
-                !i.getAttribute('href').match(/^#/) &&
-                !i.getAttribute('href').match(/^javascript\:/) &&
+            var attrHref = i.getAttribute('href')
+            if (FORCE_TARGET_WINDOW && attrHref &&
+                attrHref.match(/^#/) && attrHref.match(/^javascript\:/) &&
                 i.className.indexOf('autopagerize_link') < 0) {
                 i.target = '_blank'
             }
+            if (attrHref && !attrHref.match(/^#/) && !i.href.match(/^\w+:/)) {
+                var base = getFirstElementByXPath('//base', doc)
+                var u = (base && base.href) ? base.href : url
+                i.href = resolvePath(i.href, u)
+            }
         })
-    }
-    AutoPager.documentFilters.push(setTargetBlank)
+    }, 0)
 }
+AutoPager.documentFilters.push(linkFilter)
+
 if (typeof(window.AutoPagerize) == 'undefined') {
     window.AutoPagerize = {}
     window.AutoPagerize.addFilter = function(f) {
