@@ -657,22 +657,20 @@ var getCacheErrorCallback = function(url) {
 }
 
 var linkFilter = function(doc, url) {
-    setTimeout(function() {
-        var anchers = getElementsByXPath('descendant-or-self::a', doc)
-        anchers.forEach(function(i) {
-            var attrHref = i.getAttribute('href')
-            if (FORCE_TARGET_WINDOW && attrHref &&
-                attrHref.match(/^#/) && attrHref.match(/^javascript\:/) &&
-                i.className.indexOf('autopagerize_link') < 0) {
-                i.target = '_blank'
-            }
-            if (attrHref && !attrHref.match(/^#/) && !i.href.match(/^\w+:/)) {
-                var base = getFirstElementByXPath('//base', doc)
-                var u = (base && base.href) ? base.href : url
-                i.href = resolvePath(i.href, u)
-            }
-        })
-    }, 0)
+    var anchers = getElementsByXPath('descendant-or-self::a[@href]', doc)
+    var base = getFirstElementByXPath('//base[@href]', doc)
+    var baseUrl = base ? base.href : url
+    anchers.forEach(function(i) {
+        var attrHref = i.getAttribute('href')
+        if (FORCE_TARGET_WINDOW && attrHref.match(/^#/) &&
+            attrHref.match(/^javascript\:/) &&
+            i.className.indexOf('autopagerize_link') < 0) {
+            i.target = '_blank'
+        }
+        if (!attrHref.match(/^#/) && !i.href.match(/^\w+:/)) {
+            i.href = resolvePath(i.href, baseUrl)
+        }
+    })
 }
 AutoPager.documentFilters.push(linkFilter)
 
