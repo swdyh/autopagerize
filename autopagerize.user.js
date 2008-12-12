@@ -20,7 +20,6 @@
 // http://www.gnu.org/copyleft/gpl.html
 //
 
-var HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 var URL = 'http://userscripts.org/scripts/show/8551'
 var VERSION = '0.0.31'
 var DEBUG = false
@@ -69,7 +68,7 @@ var AutoPager = function(info) {
     this.info = info
     this.state = AUTO_START ? 'enable' : 'disable'
     var self = this
-    var url = this.getNextURL(info.nextLink, document)
+    var url = this.getNextURL(info.nextLink, document, location.href)
 
     if ( !url ) {
         debug("getNextURL returns null.", info.nextLink)
@@ -294,8 +293,9 @@ AutoPager.prototype.requestLoad = function(res) {
 }
 
 AutoPager.prototype.addPage = function(htmlDoc, page) {
-    var hr = document.createElementNS(HTML_NAMESPACE, 'hr')
-    var p = document.createElementNS(HTML_NAMESPACE, 'p')
+    var HTML_NS  = 'http://www.w3.org/1999/xhtml'
+    var hr = document.createElementNS(HTML_NS, 'hr')
+    var p  = document.createElementNS(HTML_NS, 'p')
     hr.setAttribute('class', 'autopagerize_page_separator')
     p.setAttribute('class', 'autopagerize_page_info')
     var self = this
@@ -360,9 +360,8 @@ AutoPager.prototype.getNextURL = function(xpath, doc, url) {
             return nextValue
         }
         else {
-            var base = getFirstElementByXPath('//base', doc)
-            var u = (base && base.href) ? base.href : (url || location.href)
-            return resolvePath(nextValue, u)
+            var base = getFirstElementByXPath('//base[@href]', doc)
+            return resolvePath(nextValue, (base ? base.href : url))
         }
     }
 }
@@ -657,17 +656,21 @@ var getCacheErrorCallback = function(url) {
 }
 
 var linkFilter = function(doc, url) {
-    var anchers = getElementsByXPath('descendant-or-self::a[@href]', doc)
     var base = getFirstElementByXPath('//base[@href]', doc)
     var baseUrl = base ? base.href : url
+    var isSameBase = isSameBaseUrl(location.href, baseUrl)
+    if (!FORCE_TARGET_WINDOW && isSameBase) {
+        return
+    }
+
+    var anchers = getElementsByXPath('descendant-or-self::a[@href]', doc)
     anchers.forEach(function(i) {
         var attrHref = i.getAttribute('href')
-        if (FORCE_TARGET_WINDOW && attrHref.match(/^#/) &&
-            attrHref.match(/^javascript\:/) &&
+        if (FORCE_TARGET_WINDOW && !attrHref.match(/^#|^javascript:/) &&
             i.className.indexOf('autopagerize_link') < 0) {
             i.target = '_blank'
         }
-        if (!attrHref.match(/^#/) && !i.href.match(/^\w+:/)) {
+        if (!isSameBase && !attrHref.match(/^#|^\w+:/)) {
             i.href = resolvePath(i.href, baseUrl)
         }
     })
@@ -707,8 +710,14 @@ return
 
 // utility functions.
 function createHTMLDocumentByString(str) {
-    var html = str.replace(/<!DOCTYPE.*?>/, '').replace(/<html.*?>/, '').replace(/<\/html>.*/, '')
-    var htmlDoc  = document.implementation.createDocument(null, 'html', null)
+    var XMLNS_NS = 'http://www.w3.org/2000/xmlns/'
+    var html = str.replace(/<\?xml.*?\?>/, '').replace(/<!DOCTYPE.*?>/, '').replace(/<html.*?>/, '').replace(/<\/html>.*/, '')
+    // Use |document.lookupNamespaceURI('')| for Opera 9.5
+    var defaultNS = document.lookupNamespaceURI(null)
+    var htmlDoc   = document.implementation.createDocument(defaultNS, 'html', null)
+    if (defaultNS) {
+        htmlDoc.documentElement.setAttributeNS(XMLNS_NS, 'xmlns', defaultNS)
+    }
     var fragment = createDocumentFragmentByString(html)
     try {
         fragment = htmlDoc.adoptNode(fragment)
@@ -716,14 +725,12 @@ function createHTMLDocumentByString(str) {
         fragment = htmlDoc.importNode(fragment, true)
     }
     htmlDoc.documentElement.appendChild(fragment)
-   return htmlDoc
+    return htmlDoc
 }
 
 function getElementsByXPath(xpath, node) {
-    var node = node || document
-    var doc = node.ownerDocument ? node.ownerDocument : node
-    var nodesSnapshot = doc.evaluate(xpath, node, null,
-        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)
+    var nodesSnapshot = getXPathResult(xpath, node,
+        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE)
     var data = []
     for (var i = 0; i < nodesSnapshot.snapshotLength; i++) {
         data.push(nodesSnapshot.snapshotItem(i))
@@ -732,11 +739,53 @@ function getElementsByXPath(xpath, node) {
 }
 
 function getFirstElementByXPath(xpath, node) {
+    var result = getXPathResult(xpath, node,
+        XPathResult.FIRST_ORDERED_NODE_TYPE)
+    return result.singleNodeValue
+}
+
+function getXPathResult(xpath, node, resultType) {
     var node = node || document
-    var doc = node.ownerDocument ? node.ownerDocument : node
-    var result = doc.evaluate(xpath, node, null,
-        XPathResult.FIRST_ORDERED_NODE_TYPE, null)
-    return result.singleNodeValue ? result.singleNodeValue : null
+    var doc = node.ownerDocument || node
+    var resolver = doc.createNSResolver(node.documentElement || node)
+    // Use |node.lookupNamespaceURI('')| for Opera 9.5
+    var defaultNS = node.lookupNamespaceURI(null)
+    if (defaultNS) {
+        const defaultPrefix = '__default__'
+        xpath = addDefaultPrefix(xpath, defaultPrefix)
+        var defaultResolver = resolver
+        resolver = function (prefix) {
+            return (prefix == defaultPrefix)
+                ? defaultNS : defaultResolver.lookupNamespaceURI(prefix)
+        }
+    }
+    return doc.evaluate(xpath, node, resolver, resultType, null)
+}
+
+function addDefaultPrefix(xpath, prefix) {
+    const tokenPattern = /([A-Za-z_\u00c0-\ufffd][\w\-.\u00b7-\ufffd]*|\*)\s*(::?|\()?|(".*?"|'.*?'|\d+(?:\.\d*)?|\.(?:\.|\d+)?|[\)\]])|(\/\/?|!=|[<>]=?|[\(\[|,=+-])|([@$])/g
+    const TERM = 1, OPERATOR = 2, MODIFIER = 3
+    var tokenType = OPERATOR
+    prefix += ':'
+    function replacer(token, identifier, suffix, term, operator, modifier) {
+        if (suffix) {
+            tokenType =
+                (suffix == ':' || (suffix == '::' &&
+                 (identifier == 'attribute' || identifier == 'namespace')))
+                ? MODIFIER : OPERATOR
+        }
+        else if (identifier) {
+            if (tokenType == OPERATOR && identifier != '*') {
+                token = prefix + token
+            }
+            tokenType = (tokenType == TERM) ? OPERATOR : TERM
+        }
+        else {
+            tokenType = term ? TERM : operator ? OPERATOR : MODIFIER
+        }
+        return token
+    }
+    return xpath.replace(tokenPattern, replacer)
 }
 
 function createDocumentFragmentByString(str) {
@@ -799,6 +848,10 @@ function isSameDomain(url) {
     return location.host == url.split('/')[2]
 }
 
+function isSameBaseUrl(urlA, urlB) {
+    return (urlA.replace(/[^/]+$/, '') == urlB.replace(/[^/]+$/, ''))
+}
+
 function supportsFinalUrl() {
     return (GM_getResourceURL)
 }
@@ -811,5 +864,4 @@ function resolvePath(path, base) {
     a.href = path
     return a.href
 }
-
 
