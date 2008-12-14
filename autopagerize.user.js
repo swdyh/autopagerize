@@ -172,6 +172,7 @@ AutoPager.prototype.initHelp = function() {
     }
     helpDiv.addEventListener('mouseout', proc, false)
     this.helpLayer = helpDiv
+    GM_addStyle('#autopagerize_help a { color: #0f0; text-decoration: underline;}')
 }
 
 AutoPager.prototype.viewHelp = function() {
