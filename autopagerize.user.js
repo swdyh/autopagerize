@@ -863,5 +863,6 @@ function resolvePath(path, base) {
 }
 
 function strip_html_tag(str) {
-    return str.replace(/^[\s\S]*?<html[\s\S]*?>/i, '').replace(/<\/html\s*>/ig, '')
+    var re = /^[\s\S]*?<html(?:[ \t\r\n][^>]*)?>|<\/html[ \t\r\n]*>[\w\W]*$/ig
+    return str.replace(re, '')
 }
