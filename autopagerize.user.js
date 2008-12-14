@@ -710,14 +710,11 @@ return
 
 // utility functions.
 function createHTMLDocumentByString(str) {
-    var XMLNS_NS = 'http://www.w3.org/2000/xmlns/'
-    var html = str.replace(/<\?xml.*?\?>/, '').replace(/<!DOCTYPE.*?>/, '').replace(/<html.*?>/, '').replace(/<\/html>.*/, '')
-    // Use |document.lookupNamespaceURI('')| for Opera 9.5
-    var defaultNS = document.lookupNamespaceURI(null)
-    var htmlDoc   = document.implementation.createDocument(defaultNS, 'html', null)
-    if (defaultNS) {
-        htmlDoc.documentElement.setAttributeNS(XMLNS_NS, 'xmlns', defaultNS)
+    if (document.documentElement.nodeName != 'HTML') {
+        return new DOMParser().parseFromString(str, 'application/xhtml+xml')
     }
+    var html = strip_html_tag(str)
+    var htmlDoc = document.implementation.createDocument(null, 'html', null)
     var fragment = createDocumentFragmentByString(html)
     try {
         fragment = htmlDoc.adoptNode(fragment)
@@ -865,3 +862,6 @@ function resolvePath(path, base) {
     return a.href
 }
 
+function strip_html_tag(str) {
+    return str.replace(/^[\s\S]*?<html[\s\S]*?>/i, '').replace(/<\/html\s*>/ig, '')
+}
