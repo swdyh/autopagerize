@@ -28,6 +28,7 @@ var CACHE_EXPIRE = 24 * 60 * 60 * 1000
 var BASE_REMAIN_HEIGHT = 400
 var FORCE_TARGET_WINDOW = true
 var USE_COUNTER = true
+var XHR_TIMEOUT = 30 * 1000
 var SITEINFO_IMPORT_URLS = [
     'http://wedata.net/databases/AutoPagerize/items.json',
 ]
@@ -692,15 +693,28 @@ GM_registerMenuCommand('AutoPagerize - clear cache', clearCache)
 var ap = null
 launchAutoPager(SITEINFO)
 var cacheInfo = getCache()
+var xhrStates = {}
 SITEINFO_IMPORT_URLS.forEach(function(i) {
     if (!cacheInfo[i] || cacheInfo[i].expire < new Date()) {
         var opt = {
             method: 'get',
             url: i,
-            onload: function(res) {getCacheCallback(res, i)},
-            onerror: function(res){getCacheErrorCallback(i)},
+            onload: function(res) {
+                xhrStates[i] = 'loaded'
+                getCacheCallback(res, i)
+            },
+            onerror: function(res){
+                xhrStates[i] = 'error'
+                getCacheErrorCallback(i)
+            },
         }
+        xhrStates[i] = 'start'
         GM_xmlhttpRequest(opt)
+        setTimeout(function() {
+            if (xhrStates[i] == 'start') {
+                getCacheErrorCallback(i)
+            }
+        }, XHR_TIMEOUT)
     }
     else {
         launchAutoPager(cacheInfo[i].info)
