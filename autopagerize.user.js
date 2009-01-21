@@ -9,7 +9,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.34 2008-12-24T11:11:07+09:00
+// version: 0.0.35 2009-01-21T23:08:07+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -21,7 +21,7 @@
 //
 
 var URL = 'http://userscripts.org/scripts/show/8551'
-var VERSION = '0.0.34'
+var VERSION = '0.0.35'
 var DEBUG = false
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
@@ -687,6 +687,10 @@ if (typeof(window.AutoPagerize) == 'undefined') {
     window.AutoPagerize.addDocumentFilter = function(f) {
         AutoPager.documentFilters.push(f)
     }
+
+	var ev = document.createEvent('Events')
+	ev.initEvent('GM_AutoPagerizeLoaded', false, true)
+	window.dispatchEvent(ev)
 }
 
 GM_registerMenuCommand('AutoPagerize - clear cache', clearCache)
