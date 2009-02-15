@@ -325,7 +325,7 @@ AutoPager.prototype.addPage = function(htmlDoc, page) {
     }
 
     p.innerHTML = 'page: <a class="autopagerize_link" href="' +
-        this.requestURL + '">' + (++this.pageNum) + '</a>'
+        this.requestURL.replace(/&/g, '&amp;') + '">' + (++this.pageNum) + '</a>'
     return page.map(function(i) {
         var pe = document.importNode(i, true)
         self.insertPoint.parentNode.insertBefore(pe, self.insertPoint)
