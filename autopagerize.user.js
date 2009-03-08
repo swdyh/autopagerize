@@ -222,12 +222,17 @@ AutoPager.prototype.request = function() {
     this.lastRequestURL = this.requestURL
     var self = this
     var mime = 'text/html; charset=' + document.characterSet
+    var headers = {}
+    if (isSameDomain(this.requestURL)) {
+        headers.Cookie = document.cookie
+    }
     var opt = {
         method: 'get',
         url: this.requestURL,
+        headers: headers,
         overrideMimeType: mime,
         onerror: this.error,
-        onload: function(res){
+        onload: function(res) {
             self.requestLoad.apply(self, [res])
         }
     }
