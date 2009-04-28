@@ -634,6 +634,18 @@ var getCacheCallback = function(res, url) {
     if (info.length > 0) {
         info = info.filter(function(i) { return ('url' in i) })
         info.sort(function(a, b) { return (b.url.length - a.url.length) })
+
+        var r_keys = ['url', 'nextLink', 'insertBefore', 'pageElement']
+        info = info.map(function(i) {
+            var item = {}
+            r_keys.forEach(function(key) {
+                if (i[key]) {
+                    item[key] = i[key]
+                }
+            })
+            return item
+        })
+
         cacheInfo[url] = {
             url: url,
             expire: new Date(new Date().getTime() + CACHE_EXPIRE),
