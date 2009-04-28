@@ -705,9 +705,9 @@ if (typeof(window.AutoPagerize) == 'undefined') {
         AutoPager.documentFilters.push(f)
     }
 
-	var ev = document.createEvent('Events')
-	ev.initEvent('GM_AutoPagerizeLoaded', false, true)
-	window.dispatchEvent(ev)
+    var ev = document.createEvent('Events')
+    ev.initEvent('GM_AutoPagerizeLoaded', false, true)
+    window.dispatchEvent(ev)
 }
 
 GM_registerMenuCommand('AutoPagerize - clear cache', clearCache)
