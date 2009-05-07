@@ -236,6 +236,7 @@ AutoPager.prototype.request = function() {
             self.requestLoad.apply(self, [res])
         }
     }
+    AutoPager.requestFilters.forEach(function(i) { i(opt) }, this)
     this.showLoading(true)
     GM_xmlhttpRequest(opt)
 }
@@ -253,6 +254,10 @@ AutoPager.prototype.requestLoad = function(res) {
     if (!this.canHandleCrossDomainRequest()) {
         return
     }
+
+    AutoPager.responseFilters.forEach(function(i) {
+        i(res, this.requestURL)
+    }, this)
 
     if (res.finalUrl) {
         this.requestURL = res.finalUrl
@@ -398,6 +403,8 @@ AutoPager.prototype.error = function() {
 }
 
 AutoPager.documentFilters = []
+AutoPager.requestFilters = []
+AutoPager.responseFilters = []
 AutoPager.filters = []
 
 function Counter() {}
@@ -703,6 +710,12 @@ if (typeof(window.AutoPagerize) == 'undefined') {
     }
     window.AutoPagerize.addDocumentFilter = function(f) {
         AutoPager.documentFilters.push(f)
+    }
+    window.AutoPagerize.addResponseFilter = function(f) {
+        AutoPager.responseFilters.push(f)
+    }
+    window.AutoPagerize.addRequestFilter = function(f) {
+        AutoPager.requestFilters.push(f)
     }
 
     var ev = document.createEvent('Events')
