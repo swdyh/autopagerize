@@ -9,7 +9,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.36 2009-03-08T14:43:37+09:00
+// version: 0.0.37 2009-05-07T13:52:56+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -21,7 +21,7 @@
 //
 
 var URL = 'http://userscripts.org/scripts/show/8551'
-var VERSION = '0.0.36'
+var VERSION = '0.0.37'
 var DEBUG = false
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
