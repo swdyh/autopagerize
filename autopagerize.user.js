@@ -717,6 +717,7 @@ if (typeof(window.AutoPagerize) == 'undefined') {
     window.AutoPagerize.addRequestFilter = function(f) {
         AutoPager.requestFilters.push(f)
     }
+    window.AutoPagerize.launchAutoPager = launchAutoPager
 
     var ev = document.createEvent('Events')
     ev.initEvent('GM_AutoPagerizeLoaded', false, true)
