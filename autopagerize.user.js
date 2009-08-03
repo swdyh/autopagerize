@@ -26,7 +26,7 @@ var DEBUG = false
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
 var BASE_REMAIN_HEIGHT = 400
-var FORCE_TARGET_WINDOW = true
+var FORCE_TARGET_WINDOW = getPref('force_target_window', true)
 var USE_COUNTER = true
 var XHR_TIMEOUT = 30 * 1000
 var SITEINFO_IMPORT_URLS = [
@@ -923,4 +923,9 @@ function strip_html_tag(str) {
         chunks.splice(chunks.length - 2)
     }
     return chunks.join('')
+}
+
+function getPref(key, defaultValue) {
+    var value = GM_getValue(key)
+    return (typeof value == 'undefined') ? defaultValue : value
 }
