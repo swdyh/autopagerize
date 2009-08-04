@@ -367,7 +367,8 @@ AutoPager.prototype.initIcon = function() {
 AutoPager.prototype.getNextURL = function(xpath, doc, url) {
     var nextLink = getFirstElementByXPath(xpath, doc)
     if (nextLink) {
-        var nextValue = nextLink.href || nextLink.action || nextLink.value
+        var nextValue = nextLink.getAttribute('href') ||
+            nextLink.getAttribute('action') || nextLink.value
         if (nextValue.match(/^http(s)?:/)) {
             return nextValue
         }
@@ -697,11 +698,13 @@ var linkFilter = function(doc, url) {
             i.target = '_blank'
         }
         if (!isSameBase && !attrHref.match(/^#|^\w+:/)) {
-            i.href = resolvePath(i.href, baseUrl)
+            i.href = resolvePath(i.getAttribute('href'), baseUrl)
         }
     })
 }
 AutoPager.documentFilters.push(linkFilter)
+
+fixResolvePath()
 
 if (typeof(window.AutoPagerize) == 'undefined') {
     window.AutoPagerize = {}
@@ -764,11 +767,22 @@ function createHTMLDocumentByString(str) {
         return new DOMParser().parseFromString(str, 'application/xhtml+xml')
     }
     var html = strip_html_tag(str)
-    var htmlDoc = document.implementation.createDocument(null, 'html', null)
+    var htmlDoc
+    try {
+        // We have to handle exceptions since Opera 9.6 throws
+        // a NOT_SUPPORTED_ERR exception for |document.cloneNode(false)|
+        // against the DOM 3 Core spec.
+        htmlDoc = document.cloneNode(false)
+        htmlDoc.appendChild(htmlDoc.importNode(document.documentElement, false))
+    }
+    catch(e) {
+        htmlDoc = document.implementation.createDocument(null, 'html', null)
+    }
     var fragment = createDocumentFragmentByString(html)
     try {
         fragment = htmlDoc.adoptNode(fragment)
-    } catch(e) {
+    }
+    catch(e) {
         fragment = htmlDoc.importNode(fragment, true)
     }
     htmlDoc.documentElement.appendChild(fragment)
@@ -910,6 +924,25 @@ function resolvePath(path, base) {
     a.setAttributeNS(XML_NS, 'xml:base', base)
     a.href = path
     return a.href
+}
+
+function fixResolvePath() {
+    if (resolvePath('', 'http://resolve.test/') == 'http://resolve.test/') {
+        return
+    }
+    // A workaround for WebKit and Mozilla 1.9.2a1pre,
+    // which don't support XML Base in HTML.
+    // https://bugs.webkit.org/show_bug.cgi?id=17423
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=505783
+    var XML_NS = 'http://www.w3.org/XML/1998/namespace'
+    var baseElement = document.createElementNS(null, 'base')
+    var pathElement = document.createElementNS(null, 'path')
+    baseElement.appendChild(pathElement)
+    resolvePath = function resolvePath_workaround(path, base) {
+        baseElement.setAttributeNS(XML_NS, 'xml:base', base)
+        pathElement.setAttributeNS(XML_NS, 'xml:base', path)
+        return pathElement.baseURI
+    }
 }
 
 function strip_html_tag(str) {
