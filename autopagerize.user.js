@@ -690,8 +690,8 @@ var linkFilter = function(doc, url) {
         return
     }
 
-    var anchers = getElementsByXPath('descendant-or-self::a[@href]', doc)
-    anchers.forEach(function(i) {
+    var anchors = getElementsByXPath('descendant-or-self::a[@href]', doc)
+    anchors.forEach(function(i) {
         var attrHref = i.getAttribute('href')
         if (FORCE_TARGET_WINDOW && !attrHref.match(/^#|^javascript:/) &&
             i.className.indexOf('autopagerize_link') < 0) {
@@ -701,6 +701,13 @@ var linkFilter = function(doc, url) {
             i.href = resolvePath(i.getAttribute('href'), baseUrl)
         }
     })
+
+    if (!isSameBase) {
+        var images = getElementsByXPath('descendant-or-self::img', doc)
+        images.forEach(function(i) {
+            i.src = resolvePath(i.getAttribute('src'), baseUrl)
+        })
+    }
 }
 AutoPager.documentFilters.push(linkFilter)
 
