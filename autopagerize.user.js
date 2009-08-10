@@ -302,6 +302,9 @@ AutoPager.prototype.requestLoad = function(res) {
         debug('nextLink not found.', this.info.nextLink, htmlDoc)
         this.terminate()
     }
+    var ev = document.createEvent('Event')
+    ev.initEvent('GM_AutoPagerizeNextPageLoaded', true, true)
+    document.dispatchEvent(ev)
 }
 
 AutoPager.prototype.addPage = function(htmlDoc, page) {
@@ -339,6 +342,11 @@ AutoPager.prototype.addPage = function(htmlDoc, page) {
     return page.map(function(i) {
         var pe = document.importNode(i, true)
         self.insertPoint.parentNode.insertBefore(pe, self.insertPoint)
+        var ev = document.createEvent('MutationEvent')
+        ev.initMutationEvent('AutoPagerize_DOMNodeInserted', true, false,
+                             self.insertPoint.parentNode, null,
+                             self.requestURL, null, null)
+        pe.dispatchEvent(ev)
         return pe
     })
 }
