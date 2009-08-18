@@ -303,7 +303,7 @@ AutoPager.prototype.requestLoad = function(res) {
         this.terminate()
     }
     var ev = document.createEvent('Event')
-    ev.initEvent('GM_AutoPagerizeNextPageLoaded', true, true)
+    ev.initEvent('GM_AutoPagerizeNextPageLoaded', true, false)
     document.dispatchEvent(ev)
 }
 
@@ -737,9 +737,9 @@ if (typeof(window.AutoPagerize) == 'undefined') {
     }
     window.AutoPagerize.launchAutoPager = launchAutoPager
 
-    var ev = document.createEvent('Events')
-    ev.initEvent('GM_AutoPagerizeLoaded', false, true)
-    window.dispatchEvent(ev)
+    var ev = document.createEvent('Event')
+    ev.initEvent('GM_AutoPagerizeLoaded', true, false)
+    document.dispatchEvent(ev)
 }
 
 GM_registerMenuCommand('AutoPagerize - clear cache', clearCache)
