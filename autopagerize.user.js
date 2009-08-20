@@ -20,7 +20,7 @@
 // http://www.gnu.org/copyleft/gpl.html
 //
 
-var URL = 'http://userscripts.org/scripts/show/8551'
+var URL = 'http://autopagerize.net/'
 var VERSION = '0.0.39'
 var DEBUG = false
 var AUTO_START = true
