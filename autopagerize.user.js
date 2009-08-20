@@ -100,16 +100,36 @@ var AutoPager = function(info) {
     GM_registerMenuCommand('AutoPagerize - on/off', toggle)
     this.scroll= function() { self.onScroll() }
     window.addEventListener("scroll", this.scroll, false)
-    this.initIcon()
-    this.initHelp()
-    this.icon.addEventListener("mouseover",
-        function(){self.viewHelp()}, true)
+
+    if (isFirefoxExtension()) {
+        var div = document.createElement("div")
+        div.setAttribute('id', 'autopagerize_icon')
+        div.style.display = 'none'
+        document.body.appendChild(div)
+        this.icon = div
+    }
+    else {
+        this.initIcon()
+        this.initHelp()
+        this.icon.addEventListener("mouseover", function() {
+            self.viewHelp() }, true)
+    }
+
     var scrollHeight = getScrollHeight()
     var bottom = getElementPosition(this.insertPoint).top ||
         this.getPageElementsBottom() ||
         (Math.round(scrollHeight * 0.8))
     this.remainHeight = scrollHeight - bottom + BASE_REMAIN_HEIGHT
     this.onScroll()
+
+    var that = this
+    document.addEventListener('AutoPagerizeToggleRequest', function() {
+        that.toggle()
+    }, false)
+    document.addEventListener('AutoPagerizeUpdateIconRequest', function() {
+        that.updateIcon()
+    }, false)
+    that.updateIcon()
 }
 
 AutoPager.prototype.getPageElementsBottom = function() {
@@ -200,14 +220,27 @@ AutoPager.prototype.stateToggle = function() {
 
 AutoPager.prototype.enable = function() {
     this.state = 'enable'
-    this.icon.style.background = COLOR['on']
-    this.icon.style.opacity = 1
+    this.updateIcon()
 }
 
 AutoPager.prototype.disable = function() {
     this.state = 'disable'
-    this.icon.style.background = COLOR['off']
-    this.icon.style.opacity = 0.5
+    this.updateIcon()
+}
+
+AutoPager.prototype.updateIcon = function(state) {
+    var st = state || this.state
+    var rename = {'enable': 'on', 'disable': 'off' }
+    if (rename[st]) {
+        st = rename[st]
+    }
+    var color = COLOR[st]
+    if (color) {
+        this.icon.style.background = color
+        if (isFirefoxExtension()) {
+            chlorine.statusBar.update(color, location.href)
+        }
+    }
 }
 
 AutoPager.prototype.request = function() {
@@ -243,10 +276,10 @@ AutoPager.prototype.request = function() {
 
 AutoPager.prototype.showLoading = function(sw) {
     if (sw) {
-        this.icon.style.background = COLOR['loading']
+        this.updateIcon('loading')
     }
     else {
-        this.icon.style.background = COLOR['on']
+        this.updateIcon('enable')
     }
 }
 
@@ -398,16 +431,17 @@ AutoPager.prototype.canHandleCrossDomainRequest = function() {
 }
 
 AutoPager.prototype.terminate = function() {
-    this.icon.style.background = COLOR['terminated']
+    this.updateIcon('terminated')
     window.removeEventListener('scroll', this.scroll, false)
     var self = this
     setTimeout(function() {
+        self.updateIcon('disable')
         self.icon.parentNode.removeChild(self.icon)
     }, 1500)
 }
 
 AutoPager.prototype.error = function() {
-    this.icon.style.background = COLOR['error']
+    this.updateIcon('error')
     window.removeEventListener('scroll', this.scroll, false)
 }
 
@@ -976,4 +1010,8 @@ function strip_html_tag(str) {
 function getPref(key, defaultValue) {
     var value = GM_getValue(key)
     return (typeof value == 'undefined') ? defaultValue : value
+}
+
+function isFirefoxExtension() {
+    return (typeof chlorine == 'object')
 }
