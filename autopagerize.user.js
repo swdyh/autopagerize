@@ -808,6 +808,13 @@ SITEINFO_IMPORT_URLS.forEach(function(i) {
     }
 })
 launchAutoPager([MICROFORMAT])
+
+// new google search sucks!
+if (location.href.match('^http://[^.]+\.google\.(?:[^.]{2,3}\.)?[^./]{2,3}/.*(&fp=)')) {
+    var to = location.href.replace(/&fp=.*/, '')
+    // console.log([location.href, to])
+    location.href = to
+}
 return
 
 // utility functions.
