@@ -970,7 +970,7 @@ function isSameBaseUrl(urlA, urlB) {
 }
 
 function supportsFinalUrl() {
-    return (GM_getResourceURL)
+    return (typeof GM_getResourceURL != 'undefined')
 }
 
 function resolvePath(path, base) {
