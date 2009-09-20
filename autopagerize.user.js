@@ -815,7 +815,9 @@ if (location.href.match('^http://[^.]+\.google\.(?:[^.]{2,3}\.)?[^./]{2,3}/.*(&f
     // console.log([location.href, to])
     location.href = to
 }
-return
+
+
+
 
 // utility functions.
 function createHTMLDocumentByString(str) {
