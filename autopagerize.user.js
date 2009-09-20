@@ -20,6 +20,10 @@
 // http://www.gnu.org/copyleft/gpl.html
 //
 
+if (isChromeExtension()) {
+    chromeCompatible()
+}
+
 var URL = 'http://autopagerize.net/'
 var VERSION = '0.0.41'
 var DEBUG = false
@@ -776,37 +780,47 @@ if (typeof(window.AutoPagerize) == 'undefined') {
     document.dispatchEvent(ev)
 }
 
-GM_registerMenuCommand('AutoPagerize - clear cache', clearCache)
+
 var ap = null
 launchAutoPager(SITEINFO)
-var cacheInfo = getCache()
-var xhrStates = {}
-SITEINFO_IMPORT_URLS.forEach(function(i) {
-    if (!cacheInfo[i] || cacheInfo[i].expire < new Date()) {
-        var opt = {
-            method: 'get',
-            url: i,
-            onload: function(res) {
-                xhrStates[i] = 'loaded'
-                getCacheCallback(res, i)
-            },
-            onerror: function(res){
-                xhrStates[i] = 'error'
-                getCacheErrorCallback(i)
-            },
-        }
-        xhrStates[i] = 'start'
-        GM_xmlhttpRequest(opt)
-        setTimeout(function() {
-            if (xhrStates[i] == 'start') {
-                getCacheErrorCallback(i)
+if (isChromeExtension()) {
+    var port = chrome.extension.connect({name: "siteinfoChannel"})
+    port.postMessage({ url: location.href })
+    port.onMessage.addListener(function(res) {
+        launchAutoPager(res)
+    })
+}
+else {
+    GM_registerMenuCommand('AutoPagerize - clear cache', clearCache)
+    var cacheInfo = getCache()
+    var xhrStates = {}
+    SITEINFO_IMPORT_URLS.forEach(function(i) {
+        if (!cacheInfo[i] || cacheInfo[i].expire < new Date()) {
+            var opt = {
+                method: 'get',
+                url: i,
+                onload: function(res) {
+                    xhrStates[i] = 'loaded'
+                    getCacheCallback(res, i)
+                },
+                onerror: function(res){
+                    xhrStates[i] = 'error'
+                    getCacheErrorCallback(i)
+                },
             }
-        }, XHR_TIMEOUT)
-    }
-    else {
-        launchAutoPager(cacheInfo[i].info)
-    }
-})
+            xhrStates[i] = 'start'
+            GM_xmlhttpRequest(opt)
+            setTimeout(function() {
+                if (xhrStates[i] == 'start') {
+                    getCacheErrorCallback(i)
+                }
+            }, XHR_TIMEOUT)
+        }
+        else {
+            launchAutoPager(cacheInfo[i].info)
+        }
+    })
+}
 launchAutoPager([MICROFORMAT])
 
 // new google search sucks!
@@ -1023,4 +1037,49 @@ function getPref(key, defaultValue) {
 
 function isFirefoxExtension() {
     return (typeof chlorine == 'object')
+}
+
+function isChromeExtension() {
+    return (typeof chrome == 'object') &&
+        (typeof chrome.extension == 'object')
+}
+
+function chromeCompatible() {
+    GM_registerMenuCommand = function() {}
+    GM_setValue = function() {}
+    GM_getValue = function() {}
+    GM_addStyle = function() {}
+    uneval = function() {}
+    fixResolvePath = function() {}
+
+    GM_xmlhttpRequest = function(opt) {
+        var req = new XMLHttpRequest()
+        req.open('GET', opt.url, true)
+        req.overrideMimeType(opt.overrideMimeType)
+        req.onreadystatechange = function (aEvt) {
+            if (req.readyState == 4) {
+                if (req.status == 200) {
+                    opt.onload(req)
+                }
+                else {
+                    opt.onerror()
+                }
+            }
+        }
+        req.send(null)
+    }
+    createHTMLDocumentByString = function(str) {
+        if (document.documentElement.nodeName != 'HTML') {
+            return new DOMParser().parseFromString(str, 'application/xhtml+xml')
+        }
+        // FIXME
+        var html = str.replace(/<script(?:[ \t\r\n][^>]*)?>[\S\s]*?<\/script[ \t\r\n]*>|<\/?(?:i?frame|html|script|object)(?:[ \t\r\n][^<>]*)?>/gi, ' ')
+        var htmlDoc = document.implementation.createHTMLDocument ?
+        document.implementation.createHTMLDocument('apfc') :
+        document.implementation.createDocument(null, 'html', null)
+        var range = document.createRange()
+        range.selectNodeContents(document.documentElement)
+        htmlDoc.documentElement.appendChild(range.createContextualFragment(html))
+        return htmlDoc
+    }
 }
