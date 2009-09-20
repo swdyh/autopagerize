@@ -922,7 +922,7 @@ function log(message) {
 
 function debug() {
     if ( typeof DEBUG != 'undefined' && DEBUG ) {
-        console.log.apply(this, arguments)
+        console.log.apply(console, arguments)
     }
 }
 
