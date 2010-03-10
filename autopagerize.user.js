@@ -123,8 +123,10 @@ var AutoPager = function(info) {
     else {
         this.initIcon()
         this.initHelp()
+        GM_addStyle('@media print{#autopagerize_icon, #autopagerize_help {display: none !important;}}')
         this.icon.addEventListener("mouseover", function() {
-            self.viewHelp() }, true)
+            self.viewHelp()
+        }, true)
     }
 
     var scrollHeight = getScrollHeight()
