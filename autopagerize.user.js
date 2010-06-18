@@ -9,7 +9,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.43 2010-03-11T03:54:39+09:00
+// version: 0.0.50 2010-06-18T19:33:24+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -20,7 +20,7 @@
 // http://www.gnu.org/copyleft/gpl.html
 //
 
-if (isChromeExtension()) {
+if (isChromeExtension() || isSafariExtension()) {
     chromeCompatible()
 }
 else {
@@ -31,7 +31,7 @@ else {
 }
 
 var URL = 'http://autopagerize.net/'
-var VERSION = '0.0.42'
+var VERSION = '0.0.50'
 var DEBUG = false
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
@@ -119,6 +119,22 @@ var AutoPager = function(info) {
         this.icon = div
     }
     else if (isChromeExtension()) {
+    }
+    else if (isSafariExtension()) {
+        var frame = document.createElement('iframe')
+        frame.style.display = 'none'
+        frame.style.position = 'fixed'
+        frame.style.top = window.innerHeight - 25 + 'px'
+        frame.style.left = '0px'
+        frame.style.height = '25px'
+        frame.style.border = '0px'
+        frame.style.opacity = '0.8'
+        frame.style.zIndex = '1000'
+        frame.width = '100%'
+        frame.scrolling = 'no'
+        this.messageFrame = frame
+        document.body.appendChild(frame)
+        safari.self.tab.dispatchMessage('launched', {url: location.href })
     }
     else {
         this.initIcon()
@@ -256,6 +272,8 @@ AutoPager.prototype.updateIcon = function(state) {
         else if (isChromeExtension()) {
             chrome.extension.connect({name: "pageActionChannel"}).postMessage(color)
         }
+        else if (isSafariExtension()) {
+        }
         else {
             this.icon.style.background = color
         }
@@ -291,16 +309,32 @@ AutoPager.prototype.request = function() {
         }
     }
     AutoPager.requestFilters.forEach(function(i) { i(opt) }, this)
-    this.showLoading(true)
-    GM_xmlhttpRequest(opt)
+    if (opt.stop) {
+        this.requestURL = opt.url
+    }
+    else {
+        this.showLoading(true)
+        GM_xmlhttpRequest(opt)
+    }
 }
 
 AutoPager.prototype.showLoading = function(sw) {
     if (sw) {
         this.updateIcon('loading')
+        if (isSafariExtension() && settings['display_message_bar']) {
+            this.messageFrame.src = safari.extension.baseURI + 'loading.html'
+            document.documentElement.style.overflowX = 'hidden'
+            this.messageFrame.style.top = window.innerHeight - 25 + 'px'
+            this.messageFrame.style.display = 'block'
+        }
     }
     else {
         this.updateIcon('enable')
+        if (isSafariExtension() && settings['display_message_bar']) {
+            this.messageFrame.src = safari.extension.baseURI + 'loading.html'
+            this.messageFrame.style.display = 'none'
+            document.documentElement.style.overflowX = ''
+        }
     }
 }
 
@@ -442,6 +476,10 @@ AutoPager.prototype.getNextURL = function(xpath, doc, url) {
 }
 
 AutoPager.prototype.canHandleCrossDomainRequest = function() {
+    if (isChromeExtension() || isSafariExtension()) {
+        return true
+    }
+
     if (!supportsFinalUrl()) {
         if (!isSameDomain(this.requestURL)) {
             this.error()
@@ -459,12 +497,28 @@ AutoPager.prototype.terminate = function() {
         if (self.icon) {
             self.icon.parentNode.removeChild(self.icon)
         }
+        if (isSafariExtension()) {
+            var mf = self.messageFrame
+            mf.parentNode.removeChild(mf)
+            document.documentElement.style.overflowX = ''
+        }
     }, 1500)
 }
 
 AutoPager.prototype.error = function() {
     this.updateIcon('error')
     window.removeEventListener('scroll', this.scroll, false)
+    if (isSafariExtension()) {
+        var mf = this.messageFrame
+        document.documentElement.style.overflowX = 'hidden'
+        mf.style.top = window.innerHeight - 25 + 'px'
+        mf.src = safari.extension.baseURI + 'error.html'
+        mf.style = 'block'
+        setTimeout(function() {
+            mf.parentNode.removeChild(mf)
+            document.documentElement.style.overflowX = ''
+        }, 5000)
+    }
 }
 
 AutoPager.documentFilters = []
@@ -798,7 +852,7 @@ if (typeof(window.AutoPagerize) == 'undefined') {
     document.dispatchEvent(ev)
 }
 
-
+var settings = {}
 var ap = null
 if (isChromeExtension()) {
     var port = chrome.extension.connect({name: "settingsChannel"})
@@ -816,13 +870,39 @@ if (isChromeExtension()) {
                 if (port.name == "toggleRequestChannel") {
                     port.onMessage.addListener(function(msg) {
                         if (ap) {
-                            ap.toggle();
+                            ap.toggle()
                         }
                     })
                 }
             })
         })
     })
+}
+else if (isSafariExtension()) {
+    var re_exclude = /^(about:|safari-extension:)/
+    if (!location.href.match(re_exclude)) {
+        safari.self.addEventListener('message', function(event) {
+            if (event.name === 'settings') {
+                settings = event.message
+                if (!settings['exclude_patterns'] || !isExclude(settings['exclude_patterns'])) {
+                    safari.self.tab.dispatchMessage('siteinfoChannel', {url: location.href })
+                }
+            }
+            else if (event.name === 'siteinfoChannel') {
+                var res = event.message
+                launchAutoPager(res)
+            }
+            else if (event.name === 'toggleRequestChannel') {
+                if (ap) {
+                    ap.toggle()
+                }
+            }
+            else if (event.name === 'updateSettings') {
+                settings = event.message
+            }
+        }, false)
+        safari.self.tab.dispatchMessage('settings')
+    }
 }
 else {
     launchAutoPager(SITEINFO)
@@ -918,6 +998,7 @@ function getXPathResult(xpath, node, resultType) {
     var resolver = doc.createNSResolver(node.documentElement || node)
     // Use |node.lookupNamespaceURI('')| for Opera 9.5
     var defaultNS = node.lookupNamespaceURI(null)
+
     if (defaultNS) {
         const defaultPrefix = '__default__'
         xpath = addDefaultPrefix(xpath, defaultPrefix)
@@ -1079,7 +1160,7 @@ function wildcard2regep(str) {
 
 function isExclude(patterns) {
     var rr = /^\/(.+)\/$/
-    var eps = (patterns || '').split(/[\r\n]/)
+    var eps = (patterns || '').split(/[\r\n ]+/)
     for (var i = 0; i < eps.length; i++) {
         var reg = null
         if (rr.test(eps[i])) {
@@ -1104,6 +1185,11 @@ function isChromeExtension() {
         (typeof chrome.extension == 'object')
 }
 
+function isSafariExtension() {
+    return (typeof safari == 'object') &&
+        (typeof safari.extension == 'object')
+}
+
 function chromeCompatible() {
     GM_registerMenuCommand = function() {}
     GM_setValue = function() {}
@@ -1111,6 +1197,7 @@ function chromeCompatible() {
     GM_addStyle = function() {}
     uneval = function() {}
     fixResolvePath = function() {}
+    resolvePath = function (path, base) { return path }
 
     GM_xmlhttpRequest = function(opt) {
         var req = new XMLHttpRequest()
