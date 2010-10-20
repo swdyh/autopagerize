@@ -11,7 +11,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.52 2010-10-21T03:43:00+09:00
+// version: 0.0.53
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -21,18 +21,6 @@
 // Released under the GPL license
 // http://www.gnu.org/copyleft/gpl.html
 //
-
-/*
-if (isChromeExtension() || isSafariExtension()) {
-    gmCompatible()
-}
-else {
-    var ep = getPref('exclude_patterns')
-    if (ep && isExclude(ep)) {
-        return
-    }
-}
-*/
 
 if (isGreasemonkey()) {
     var ep = getPref('exclude_patterns')
@@ -46,7 +34,7 @@ else {
 }
 
 var URL = 'http://autopagerize.net/'
-var VERSION = '0.0.50'
+var VERSION = '0.0.53'
 var DEBUG = false
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
