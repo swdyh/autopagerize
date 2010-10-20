@@ -9,10 +9,9 @@
 // @exclude        http://www.facebook.com/plugins/like.php*
 // @exclude        http://api.tweetmeme.com/button.js*
 // ==/UserScript==
-
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.51 2010-10-21T01:27:18+09:00
+// version: 0.0.52 2010-10-21T03:43:00+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -317,8 +316,13 @@ AutoPager.prototype.request = function() {
     var self = this
     var mime = 'text/html; charset=' + document.characterSet
     var headers = {}
+
     if (isSameDomain(this.requestURL)) {
         headers.Cookie = document.cookie
+    }
+    else {
+        this.error()
+        return
     }
     var opt = {
         method: 'get',
@@ -338,7 +342,6 @@ AutoPager.prototype.request = function() {
     }
     else {
         this.showLoading(true)
-        // GM_xmlhttpRequest(opt)
         var req = new XMLHttpRequest()
         req.open('GET', opt.url, true)
         req.overrideMimeType(opt.overrideMimeType)
@@ -542,11 +545,14 @@ AutoPager.prototype.error = function() {
     window.removeEventListener('scroll', this.scroll, false)
     if (isSafariExtension() || isChromeExtension()) {
         var mf = this.messageFrame
-        mf.src = settings['extension_path'] + 'error.html'
-        mf.style = 'block'
+        var u = settings['extension_path'] ?
+            settings['extension_path'] + 'error.html' :
+            'http://autopagerize.net/files/error.html'
+        mf.src = u
+        mf.style.display = 'block'
         setTimeout(function() {
             mf.parentNode.removeChild(mf)
-        }, 5000)
+        }, 3000)
     }
 }
 
@@ -919,8 +925,8 @@ else if (isSafariExtension()) {
             else if (event.name === 'siteinfoChannel') {
                 if (!settings['exclude_patterns'] || !isExclude(settings['exclude_patterns'])) {
                     launchAutoPager(SITEINFO)
-                    var res = event.message
-                    launchAutoPager(res)
+                    launchAutoPager([MICROFORMAT])
+                    launchAutoPager(event.message)
                 }
             }
             else if (event.name === 'toggleRequestChannel') {
@@ -949,6 +955,7 @@ else if (isJetpack()) {
             }
             else  {
                 postMessage({ name: 'siteinfo', url: location.href })
+                launchAutoPager([MICROFORMAT])
             }
         }
     }
@@ -984,8 +991,9 @@ else {
             launchAutoPager(cacheInfo[i].info)
         }
     })
+    launchAutoPager([MICROFORMAT])
 }
-launchAutoPager([MICROFORMAT])
+
 
 // new google search sucks!
 if (location.href.match('^http://[^.]+\.google\.(?:[^.]{2,3}\.)?[^./]{2,3}/.*(&fp=)')) {
@@ -1143,7 +1151,12 @@ function getScrollHeight() {
 }
 
 function isSameDomain(url) {
-    return location.host == url.split('/')[2]
+    if (url.match(/^\w+:/)) {
+        return location.host == url.split('/')[2]
+    }
+    else {
+        return true
+    }
 }
 
 function isSameBaseUrl(urlA, urlB) {
