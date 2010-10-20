@@ -6,10 +6,13 @@
 // @include        https://*
 // @exclude        https://mail.google.com/*
 // @exclude        http://b.hatena.ne.jp/*
+// @exclude        http://www.facebook.com/plugins/like.php*
+// @exclude        http://api.tweetmeme.com/button.js*
 // ==/UserScript==
+
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.50 2010-06-18T19:33:24+09:00
+// version: 0.0.51 2010-10-21T01:27:18+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -20,14 +23,27 @@
 // http://www.gnu.org/copyleft/gpl.html
 //
 
+/*
 if (isChromeExtension() || isSafariExtension()) {
-    chromeCompatible()
+    gmCompatible()
 }
 else {
     var ep = getPref('exclude_patterns')
     if (ep && isExclude(ep)) {
         return
     }
+}
+*/
+
+if (isGreasemonkey()) {
+    var ep = getPref('exclude_patterns')
+    if (ep && isExclude(ep)) {
+        // FIXME
+        // return
+    }
+}
+else {
+    gmCompatible()
 }
 
 var URL = 'http://autopagerize.net/'
@@ -118,13 +134,11 @@ var AutoPager = function(info) {
         document.body.appendChild(div)
         this.icon = div
     }
-    else if (isChromeExtension()) {
-    }
-    else if (isSafariExtension()) {
+    else if (isChromeExtension() || isSafariExtension() || isJetpack()) {
         var frame = document.createElement('iframe')
         frame.style.display = 'none'
         frame.style.position = 'fixed'
-        frame.style.top = window.innerHeight - 25 + 'px'
+        frame.style.bottom = '0px'
         frame.style.left = '0px'
         frame.style.height = '25px'
         frame.style.border = '0px'
@@ -133,9 +147,21 @@ var AutoPager = function(info) {
         frame.width = '100%'
         frame.scrolling = 'no'
         this.messageFrame = frame
+        var u = settings['extension_path'] ?
+            settings['extension_path'] + 'loading.html' :
+            'http://autopagerize.net/files/loading.html'
+        this.messageFrame.src = u
         document.body.appendChild(frame)
-        safari.self.tab.dispatchMessage('launched', {url: location.href })
-    }
+        if (isSafariExtension()) {
+            safari.self.tab.dispatchMessage('launched', {url: location.href })
+        }
+        else if (isChromeExtension()) {
+            chrome.extension.connect({name: "launched"}).postMessage()
+        }
+        if (isJetpack()) {
+            postMessage({name: 'launched', data: location.href })
+        }
+   }
     else {
         this.initIcon()
         this.initHelp()
@@ -272,7 +298,7 @@ AutoPager.prototype.updateIcon = function(state) {
         else if (isChromeExtension()) {
             chrome.extension.connect({name: "pageActionChannel"}).postMessage(color)
         }
-        else if (isSafariExtension()) {
+        else if (isSafariExtension() || isJetpack()) {
         }
         else {
             this.icon.style.background = color
@@ -284,11 +310,9 @@ AutoPager.prototype.request = function() {
     if (!this.requestURL || this.lastRequestURL == this.requestURL) {
         return
     }
-
     if (!this.canHandleCrossDomainRequest()) {
         return
     }
-
     this.lastRequestURL = this.requestURL
     var self = this
     var mime = 'text/html; charset=' + document.characterSet
@@ -314,31 +338,41 @@ AutoPager.prototype.request = function() {
     }
     else {
         this.showLoading(true)
-        GM_xmlhttpRequest(opt)
+        // GM_xmlhttpRequest(opt)
+        var req = new XMLHttpRequest()
+        req.open('GET', opt.url, true)
+        req.overrideMimeType(opt.overrideMimeType)
+        req.onreadystatechange = function (aEvt) {
+            if (req.readyState == 4) {
+                if (req.status == 200) {
+                    opt.onload(req)
+                }
+                else {
+                    opt.onerror()
+                }
+            }
+        }
+        req.send(null)
     }
 }
 
 AutoPager.prototype.showLoading = function(sw) {
     if (sw) {
         this.updateIcon('loading')
-        if (isSafariExtension() && settings['display_message_bar']) {
-            this.messageFrame.src = safari.extension.baseURI + 'loading.html'
-            document.documentElement.style.overflowX = 'hidden'
-            this.messageFrame.style.top = window.innerHeight - 25 + 'px'
+        if (this.messageFrame && settings['display_message_bar']) {
             this.messageFrame.style.display = 'block'
         }
     }
     else {
         this.updateIcon('enable')
-        if (isSafariExtension() && settings['display_message_bar']) {
-            this.messageFrame.src = safari.extension.baseURI + 'loading.html'
+        if (this.messageFrame) {
             this.messageFrame.style.display = 'none'
-            document.documentElement.style.overflowX = ''
         }
     }
 }
 
 AutoPager.prototype.requestLoad = function(res) {
+
     if (!this.canHandleCrossDomainRequest()) {
         return
     }
@@ -476,10 +510,9 @@ AutoPager.prototype.getNextURL = function(xpath, doc, url) {
 }
 
 AutoPager.prototype.canHandleCrossDomainRequest = function() {
-    if (isChromeExtension() || isSafariExtension()) {
+    if (!isGreasemonkey()) {
         return true
     }
-
     if (!supportsFinalUrl()) {
         if (!isSameDomain(this.requestURL)) {
             this.error()
@@ -500,7 +533,6 @@ AutoPager.prototype.terminate = function() {
         if (isSafariExtension()) {
             var mf = self.messageFrame
             mf.parentNode.removeChild(mf)
-            document.documentElement.style.overflowX = ''
         }
     }, 1500)
 }
@@ -508,15 +540,12 @@ AutoPager.prototype.terminate = function() {
 AutoPager.prototype.error = function() {
     this.updateIcon('error')
     window.removeEventListener('scroll', this.scroll, false)
-    if (isSafariExtension()) {
+    if (isSafariExtension() || isChromeExtension()) {
         var mf = this.messageFrame
-        document.documentElement.style.overflowX = 'hidden'
-        mf.style.top = window.innerHeight - 25 + 'px'
-        mf.src = safari.extension.baseURI + 'error.html'
+        mf.src = settings['extension_path'] + 'error.html'
         mf.style = 'block'
         setTimeout(function() {
             mf.parentNode.removeChild(mf)
-            document.documentElement.style.overflowX = ''
         }, 5000)
     }
 }
@@ -858,6 +887,7 @@ if (isChromeExtension()) {
     var port = chrome.extension.connect({name: "settingsChannel"})
     port.postMessage()
     port.onMessage.addListener(function(res) {
+        settings = res
         if (res['exclude_patterns'] && isExclude(res['exclude_patterns'])) {
             return
         }
@@ -884,13 +914,14 @@ else if (isSafariExtension()) {
         safari.self.addEventListener('message', function(event) {
             if (event.name === 'settings') {
                 settings = event.message
-                if (!settings['exclude_patterns'] || !isExclude(settings['exclude_patterns'])) {
-                    safari.self.tab.dispatchMessage('siteinfoChannel', {url: location.href })
-                }
+                safari.self.tab.dispatchMessage('siteinfoChannel', {url: location.href })
             }
             else if (event.name === 'siteinfoChannel') {
-                var res = event.message
-                launchAutoPager(res)
+                if (!settings['exclude_patterns'] || !isExclude(settings['exclude_patterns'])) {
+                    launchAutoPager(SITEINFO)
+                    var res = event.message
+                    launchAutoPager(res)
+                }
             }
             else if (event.name === 'toggleRequestChannel') {
                 if (ap) {
@@ -902,6 +933,24 @@ else if (isSafariExtension()) {
             }
         }, false)
         safari.self.tab.dispatchMessage('settings')
+    }
+}
+else if (isJetpack()) {
+    postMessage({ name: 'settings' })
+    onMessage = function(message) {
+        if (message.name == 'siteinfo') {
+            // launchAutoPager(SITEINFO)
+            launchAutoPager(message.data)
+        }
+        else if (message.name == 'settings') {
+            settings = message.data
+            if (settings['exclude_patterns'] && isExclude(settings['exclude_patterns'])) {
+                // return
+            }
+            else  {
+                postMessage({ name: 'siteinfo', url: location.href })
+            }
+        }
     }
 }
 else {
@@ -1175,7 +1224,7 @@ function isExclude(patterns) {
     }
     return false
 }
-
+// obsolete
 function isFirefoxExtension() {
     return (typeof chlorine == 'object')
 }
@@ -1190,7 +1239,17 @@ function isSafariExtension() {
         (typeof safari.extension == 'object')
 }
 
-function chromeCompatible() {
+function isGreasemonkey() {
+    return (typeof GM_log == 'function')
+}
+
+function isJetpack() {
+    // isFirefoxExtension is obsolete
+    return (!isGreasemonkey() && !isSafariExtension() &&
+            !isChromeExtension() && !isFirefoxExtension())
+}
+
+function gmCompatible() {
     GM_registerMenuCommand = function() {}
     GM_setValue = function() {}
     GM_getValue = function() {}
@@ -1199,34 +1258,21 @@ function chromeCompatible() {
     fixResolvePath = function() {}
     resolvePath = function (path, base) { return path }
 
-    GM_xmlhttpRequest = function(opt) {
-        var req = new XMLHttpRequest()
-        req.open('GET', opt.url, true)
-        req.overrideMimeType(opt.overrideMimeType)
-        req.onreadystatechange = function (aEvt) {
-            if (req.readyState == 4) {
-                if (req.status == 200) {
-                    opt.onload(req)
-                }
-                else {
-                    opt.onerror()
-                }
+    if (isChromeExtension() || isSafariExtension()) {
+        createHTMLDocumentByString = function(str) {
+            if (document.documentElement.nodeName != 'HTML') {
+                return new DOMParser().parseFromString(str, 'application/xhtml+xml')
             }
+            // FIXME
+            var html = str.replace(/<script(?:[ \t\r\n][^>]*)?>[\S\s]*?<\/script[ \t\r\n]*>|<\/?(?:i?frame|html|script|object)(?:[ \t\r\n][^<>]*)?>/gi, ' ')
+            var htmlDoc = document.implementation.createHTMLDocument ?
+                document.implementation.createHTMLDocument('apfc') :
+                document.implementation.createDocument(null, 'html', null)
+            var range = document.createRange()
+            range.selectNodeContents(document.documentElement)
+            htmlDoc.documentElement.appendChild(range.createContextualFragment(html))
+            return htmlDoc
         }
-        req.send(null)
     }
-    createHTMLDocumentByString = function(str) {
-        if (document.documentElement.nodeName != 'HTML') {
-            return new DOMParser().parseFromString(str, 'application/xhtml+xml')
-        }
-        // FIXME
-        var html = str.replace(/<script(?:[ \t\r\n][^>]*)?>[\S\s]*?<\/script[ \t\r\n]*>|<\/?(?:i?frame|html|script|object)(?:[ \t\r\n][^<>]*)?>/gi, ' ')
-        var htmlDoc = document.implementation.createHTMLDocument ?
-        document.implementation.createHTMLDocument('apfc') :
-        document.implementation.createDocument(null, 'html', null)
-        var range = document.createRange()
-        range.selectNodeContents(document.documentElement)
-        htmlDoc.documentElement.appendChild(range.createContextualFragment(html))
-        return htmlDoc
-    }
+    return true
 }
