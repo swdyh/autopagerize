@@ -331,7 +331,7 @@ AutoPager.prototype.request = function() {
         req.overrideMimeType(opt.overrideMimeType)
         req.onreadystatechange = function (aEvt) {
             if (req.readyState == 4) {
-                if (req.status == 200) {
+                if (req.status == 200 && req.getAllResponseHeaders()) {
                     opt.onload(req)
                 }
                 else {
