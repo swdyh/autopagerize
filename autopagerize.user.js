@@ -504,7 +504,7 @@ AutoPager.prototype.terminate = function() {
 AutoPager.prototype.error = function() {
     this.updateIcon('error')
     window.removeEventListener('scroll', this.scroll, false)
-    if (isSafariExtension() || isChromeExtension()) {
+    if (isSafariExtension() || isChromeExtension() || isJetpack()) {
         var mf = this.messageFrame
         var u = settings['extension_path'] ?
             settings['extension_path'] + 'error.html' :
