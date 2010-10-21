@@ -296,9 +296,6 @@ AutoPager.prototype.request = function() {
     if (!this.requestURL || this.lastRequestURL == this.requestURL) {
         return
     }
-    if (!this.canHandleCrossDomainRequest()) {
-        return
-    }
     this.lastRequestURL = this.requestURL
     var self = this
     var mime = 'text/html; charset=' + document.characterSet
@@ -362,19 +359,9 @@ AutoPager.prototype.showLoading = function(sw) {
 }
 
 AutoPager.prototype.requestLoad = function(res) {
-
-    if (!this.canHandleCrossDomainRequest()) {
-        return
-    }
-
     AutoPager.responseFilters.forEach(function(i) {
         i(res, this.requestURL)
     }, this)
-
-    if (res.finalUrl) {
-        this.requestURL = res.finalUrl
-    }
-
     var t = res.responseText
     var htmlDoc = createHTMLDocumentByString(t)
     AutoPager.documentFilters.forEach(function(i) {
@@ -497,19 +484,6 @@ AutoPager.prototype.getNextURL = function(xpath, doc, url) {
             return resolvePath(nextValue, (base ? base.href : url))
         }
     }
-}
-
-AutoPager.prototype.canHandleCrossDomainRequest = function() {
-    if (!isGreasemonkey()) {
-        return true
-    }
-    if (!supportsFinalUrl()) {
-        if (!isSameDomain(this.requestURL)) {
-            this.error()
-            return false
-        }
-    }
-    return true
 }
 
 AutoPager.prototype.terminate = function() {
@@ -997,10 +971,6 @@ function isSameDomain(url) {
 
 function isSameBaseUrl(urlA, urlB) {
     return (urlA.replace(/[^/]+$/, '') == urlB.replace(/[^/]+$/, ''))
-}
-
-function supportsFinalUrl() {
-    return (typeof GM_getResourceURL != 'undefined')
 }
 
 function resolvePath(path, base) {
