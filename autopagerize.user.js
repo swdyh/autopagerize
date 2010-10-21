@@ -753,7 +753,12 @@ var clearCache = function() {
     GM_setValue('cacheInfo', '')
 }
 var getCache = function() {
-    return eval(GM_getValue('cacheInfo')) || {}
+    try {
+        return JSON.parse(GM_getValue('cacheInfo')) || {}
+    }
+    catch(e) {
+        return {}
+    }
 }
 var getCacheCallback = function(res, url) {
     if (res.status != 200) {
@@ -762,23 +767,10 @@ var getCacheCallback = function(res, url) {
 
     var info
     try {
-        info = eval(res.responseText).map(function(i) { return i.data })
+        info = JSON.parse(res.responseText).map(function(i) { return i.data })
     }
     catch(e) {
         info = []
-        var matched = false
-        var hdoc = createHTMLDocumentByString(res.responseText)
-        var textareas = getElementsByXPath(
-            '//*[@class="autopagerize_data"]', hdoc)
-        textareas.forEach(function(textarea) {
-            var d = parseInfo(textarea.value)
-            if (d) {
-                info.push(d)
-                if (!matched && location.href.match(d.url)) {
-                    matched = d
-                }
-            }
-        })
     }
     if (info.length > 0) {
         info = info.filter(function(i) { return ('url' in i) })
@@ -800,7 +792,7 @@ var getCacheCallback = function(res, url) {
             expire: new Date(new Date().getTime() + CACHE_EXPIRE),
             info: info
         }
-        GM_setValue('cacheInfo', cacheInfo.toSource())
+        GM_setValue('cacheInfo', JSON.stringify(cacheInfo))
         launchAutoPager(info)
     }
     else {
