@@ -318,7 +318,12 @@ AutoPager.prototype.request = function() {
             self.error()
         },
         onload: function(res) {
-            self.requestLoad.apply(self, [res])
+            if (res.finalUrl && location.host == res.finalUrl.split('/')[2]) {
+                self.requestLoad.apply(self, [res])
+            }
+            else {
+                self.error()
+            }
         }
     }
     AutoPager.requestFilters.forEach(function(i) { i(opt) }, this)
@@ -327,20 +332,7 @@ AutoPager.prototype.request = function() {
     }
     else {
         this.showLoading(true)
-        var req = new XMLHttpRequest()
-        req.open('GET', opt.url, true)
-        req.overrideMimeType(opt.overrideMimeType)
-        req.onreadystatechange = function (aEvt) {
-            if (req.readyState == 4) {
-                if (req.status == 200 && req.getAllResponseHeaders()) {
-                    opt.onload(req)
-                }
-                else {
-                    opt.onerror()
-                }
-            }
-        }
-        req.send(null)
+        GM_xmlhttpRequest(opt)
     }
 }
 
