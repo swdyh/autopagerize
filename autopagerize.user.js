@@ -2,7 +2,6 @@
 // @name           AutoPagerize
 // @namespace      http://swdyh.yu.to/
 // @description    loading next page and inserting into current page.
-// @require        https://relucks-org.appspot.com/files/html-sanitizer-minified.js
 // @include        http://*
 // @include        https://*
 // @exclude        https://mail.google.com/*
@@ -355,9 +354,7 @@ AutoPager.prototype.requestLoad = function(res) {
     AutoPager.responseFilters.forEach(function(i) {
         i(res, this.requestURL)
     }, this)
-    var f = function(a) { return a }
-    var t = html_sanitize(res.responseText, f, f)
-    var htmlDoc = createHTMLDocumentByString(t)
+    var htmlDoc = createHTMLDocumentByString(res.responseText)
     AutoPager.documentFilters.forEach(function(i) {
         i(htmlDoc, this.requestURL, this.info)
     }, this)
