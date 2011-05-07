@@ -667,21 +667,22 @@ AutoPager.documentFilters.push(linkFilter)
 
 fixResolvePath()
 
-if (typeof(window.AutoPagerize) == 'undefined') {
-    window.AutoPagerize = {}
-    window.AutoPagerize.addFilter = function(f) {
+var win = window.wrappedJSObject || window;
+if (typeof(win.AutoPagerize) == 'undefined') {
+    win.AutoPagerize = {}
+    win.AutoPagerize.addFilter = function(f) {
         AutoPager.filters.push(f)
     }
-    window.AutoPagerize.addDocumentFilter = function(f) {
+    win.AutoPagerize.addDocumentFilter = function(f) {
         AutoPager.documentFilters.push(f)
     }
-    window.AutoPagerize.addResponseFilter = function(f) {
+    win.AutoPagerize.addResponseFilter = function(f) {
         AutoPager.responseFilters.push(f)
     }
-    window.AutoPagerize.addRequestFilter = function(f) {
+    win.AutoPagerize.addRequestFilter = function(f) {
         AutoPager.requestFilters.push(f)
     }
-    window.AutoPagerize.launchAutoPager = launchAutoPager
+    win.AutoPagerize.launchAutoPager = launchAutoPager
 
     var ev = document.createEvent('Event')
     ev.initEvent('GM_AutoPagerizeLoaded', true, false)
