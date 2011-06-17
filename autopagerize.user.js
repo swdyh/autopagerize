@@ -767,7 +767,7 @@ else {
     var cacheInfo = getCache()
     var xhrStates = {}
     SITEINFO_IMPORT_URLS.forEach(function(i) {
-        if (!cacheInfo[i] || cacheInfo[i].expire < new Date()) {
+        if (!cacheInfo[i] || new Date(cacheInfo[i].expire) < new Date()) {
             var opt = {
                 method: 'get',
                 url: i,
