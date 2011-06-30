@@ -11,7 +11,7 @@
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.58 2010-10-25T15:20:34+09:00
+// version: 0.0.59 2011-07-01T01:18:05+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
