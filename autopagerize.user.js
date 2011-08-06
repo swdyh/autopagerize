@@ -969,6 +969,9 @@ function resolvePath(path, base) {
     if (path.match(/^https?:\/\//)) {
         return path
     }
+    if (path.match(/^\?/)) {
+        return base.replace(/\?.+$/, '') + path;
+    }
     if (path.match(/^[^\/]/)) {
         return base.replace(/[^/]+$/, '') + path
     }
