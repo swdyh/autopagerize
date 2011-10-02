@@ -953,7 +953,7 @@ function getScrollHeight() {
 
 function isSameDomain(url) {
     if (url.match(/^\w+:/)) {
-        var url_s = url.split('/')
+        var url_s = url.split(/[\/\?]/)
         return url_s[0] == location.protocol && location.host == url_s[2]
     }
     else {
