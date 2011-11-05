@@ -405,7 +405,7 @@ AutoPager.prototype.addPage = function(htmlDoc, page) {
     p.setAttribute('class', 'autopagerize_page_info')
     var self = this
 
-    if (page[0] && page[0].tagName == 'TR') {
+    if (page[0] && /tr/i.test(page[0].tagName)) {
         var insertParent = this.insertPoint.parentNode
         var colNodes = getElementsByXPath('child::tr[1]/child::*[self::td or self::th]', insertParent)
 
@@ -855,7 +855,20 @@ function getXPathResult(xpath, node, resultType) {
     var doc = node.ownerDocument || node
     var resolver = doc.createNSResolver(node.documentElement || node)
     // Use |node.lookupNamespaceURI('')| for Opera 9.5
-    var defaultNS = node.lookupNamespaceURI(null)
+    // A workaround for bugs of Node.lookupNamespaceURI(null)
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=693615
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=694754
+    var defaultNS = null
+    try {
+        // This follows the spec: http://www.w3.org/TR/DOM-Level-3-Core/namespaces-algorithms.html#lookupNamespaceURIAlgo
+        if (node.nodeType == node.DOCUMENT_NODE) {
+            defaultNS = node.documentElement.lookupNamespaceURI(null)
+        }
+        else {
+            defaultNS = node.lookupNamespaceURI(null)
+        }
+    }
+    catch(e) {}
 
     if (defaultNS) {
         const defaultPrefix = '__default__'
