@@ -260,7 +260,7 @@ AutoPager.prototype.initRenew = function() {
       newVersionExist = {exist: null, expire: 0}
     }
     if(newVersionExist.exist) {
-      this.updaterMain(newVersionExist.exist)
+        this.updateHandling(newVersionExist.exist)
     }else if(new Date(newVersionExist.expire) < new Date()){
       this.checkUpdate()
     }
@@ -276,7 +276,7 @@ AutoPager.prototype.checkUpdate = function() {
   GM_xmlhttpRequest(raw)
 }
 AutoPager.prototype.updateHandling = function(res){
-      var rawScript =res.responseText
+      var rawScript =res.responseText || res
       var versionRemote = stripVersion(rawScript)
       var versionLocal = stripVersion(scr_meta)
       var verR = splitVersion(versionRemote)
