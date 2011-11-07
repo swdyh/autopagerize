@@ -405,7 +405,7 @@ AutoPager.prototype.addPage = function(htmlDoc, page) {
     p.setAttribute('class', 'autopagerize_page_info')
     var self = this
 
-    if (page[0] && page[0].tagName == 'TR') {
+    if (page[0] && /tr/i.test(page[0].tagName)) {
         var insertParent = this.insertPoint.parentNode
         var colNodes = getElementsByXPath('child::tr[1]/child::*[self::td or self::th]', insertParent)
 
