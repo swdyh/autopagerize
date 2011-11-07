@@ -1,3 +1,4 @@
+var scr_meta=<><![CDATA[
 // ==UserScript==
 // @name           AutoPagerize
 // @namespace      http://swdyh.yu.to/
@@ -21,6 +22,8 @@
 // Released under the GPL license
 // http://www.gnu.org/copyleft/gpl.html
 //
+]]></>.toString();
+//ideas from http://userscripts.org/guides/45
 
 if (isGreasemonkey()) {
     var ep = getPref('exclude_patterns')
@@ -36,6 +39,8 @@ else {
 var URL = 'http://autopagerize.net/'
 var VERSION = '0.0.61'
 var DEBUG = false
+var ENABLE_UPDATE = true
+var UPDATE_URL = 'https://github.com/swdyh/autopagerize/raw/master/autopagerize.user.js'
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
 var BASE_REMAIN_HEIGHT = 400
@@ -151,6 +156,7 @@ var AutoPager = function(info) {
     else {
         this.initIcon()
         this.initHelp()
+        this.initRenew()
         GM_addStyle('@media print{#autopagerize_icon, #autopagerize_help {display: none !important;}}')
         this.icon.addEventListener("mouseover", function() {
             self.viewHelp()
@@ -237,6 +243,94 @@ AutoPager.prototype.initHelp = function() {
     this.helpLayer = helpDiv
     GM_addStyle('#autopagerize_help a { color: #0f0; text-decoration: underline;}')
 }
+
+var stripVersion = function(raw){
+  return raw.substr(raw.search(/\/\/ version:/)+3,41).split('\n')[0]
+}
+var splitVersion = function(version){
+  var splited = version.split(' ')
+  return {date:splited[2],number:splited[1].split('.').map(function(i){return parseInt(i)})}
+}
+
+AutoPager.prototype.initRenew = function() {
+  if(ENABLE_UPDATE){
+    try{
+      var newVersionExist = JSON.parse(GM_getValue('versionCheck')) || {exist: null, expire: 0}
+    }catch(e){
+      newVersionExist = {exist: null, expire: 0}
+    }
+    if(newVersionExist.exist) {
+        this.updateHandling(newVersionExist.exist)
+    }else if(new Date(newVersionExist.expire) < new Date()){
+      this.checkUpdate()
+    }
+  }
+}
+AutoPager.prototype.checkUpdate = function() {
+  var self=this
+  var raw={
+    method:'GET',
+    url:UPDATE_URL,
+    onload:self.updateHandling
+  }
+  GM_xmlhttpRequest(raw)
+}
+AutoPager.prototype.updateHandling = function(res){
+      var rawScript =res.responseText || res
+      var versionRemote = stripVersion(rawScript)
+      var versionLocal = stripVersion(scr_meta)
+      var verR = splitVersion(versionRemote)
+      var verL = splitVersion(versionLocal)
+
+      //var verCmp = verR.number.filter(function(n,i){return (n - verL.number[i])})
+      if((verR.number.filter(function(n,i){return (n - verL.number[i])}).length > 0) ||
+         (new Date(verR.date).getTime() > new Date(verL.date).getTime())){
+           GM_setValue('versionCheck', JSON.stringify({exist: versionRemote }))
+           this.updaterMain(versionRemote)
+      } else {
+           GM_setValue('versionCheck', JSON.stringify({expire: new Date(new Date().getTime() + CACHE_EXPIRE ) }))
+      }
+}
+AutoPager.prototype.updaterMain = function(versionInfo){
+    var renewDiv = document.createElement('div')
+    renewDiv.setAttribute('id', 'autopagerize_renewal')
+    renewDiv.setAttribute('style', 'padding:5px;position:fixed;' +
+                     'top:103px;right:3px;font-size:10px;' +
+                     'background:#f00;color:#000;border:1px solid #ccc;' +
+                     'z-index:255;text-align:left;font-weight:normal;' +
+                     'line-height:120%;font-family:verdana;')
+
+    var toggleDiv = document.createElement('div')
+    toggleDiv.setAttribute('style', 'margin:0 0 0 50px;')
+    var a = document.createElement('a')
+    a.setAttribute('class', 'autopagerize_link')
+    a.innerHTML = 'close'
+    a.href = 'javascript:void(0)'
+    var self = this
+    var toggle = function() {
+        renewDiv.style.top = '-300px'
+    }
+    a.addEventListener('click', toggle, false)
+    toggleDiv.appendChild(a)
+
+    var s = '<div style="width:'+ 200 +'px; height:'+ 200 + 'px; float:left;">'
+    s += '<a href="' + UPDATE_URL + '" class="autopagerize_link">update - ' + versionInfo + '</a>'
+    s += '</div>'
+    var alertDiv = document.createElement('div')
+    alertDiv.innerHTML = s
+    renewDiv.appendChild(alertDiv)
+    renewDiv.appendChild(toggleDiv)
+
+    var versionDiv = document.createElement('div')
+    versionDiv.setAttribute('style', 'clear:both;')
+    versionDiv.innerHTML = '<a href="' + URL +
+        '">AutoPagerize</a> ver ' + VERSION
+    renewDiv.appendChild(versionDiv)
+    document.body.appendChild(renewDiv)
+
+    GM_addStyle('#autopagerize_renewal a { color: #0f0; text-decoration: underline;}')
+}
+
 
 AutoPager.prototype.viewHelp = function() {
     this.helpLayer.style.top = '3px'
@@ -925,7 +1019,12 @@ function log(message) {
 
 function debug() {
     if ( typeof DEBUG != 'undefined' && DEBUG ) {
-        console.log.apply(console, arguments)
+        if (console.log.apply) {
+            console.log.apply(console, arguments)
+        }
+        else {
+            Function.prototype.apply.apply(console.log, [console, arguments])
+        }
     }
 }
 
