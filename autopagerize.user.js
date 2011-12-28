@@ -8,6 +8,9 @@
 // @exclude        http://b.hatena.ne.jp/*
 // @exclude        http://www.facebook.com/plugins/like.php*
 // @exclude        http://api.tweetmeme.com/button.js*
+// @version        0.0.62
+// @updateURL      https://userscripts.org/scripts/source/8551.user.js
+// @icon           http://autopagerize.net/img/icons/icon_032.png
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
