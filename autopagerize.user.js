@@ -8,13 +8,13 @@
 // @exclude        http://b.hatena.ne.jp/*
 // @exclude        http://www.facebook.com/plugins/like.php*
 // @exclude        http://api.tweetmeme.com/button.js*
-// @version        0.0.62
+// @version        0.0.63
 // @updateURL      https://userscripts.org/scripts/source/8551.user.js
 // @icon           http://autopagerize.net/img/icons/icon_032.png
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.62 2011-11-08T11:34:47+09:00
+// version: 0.0.63 2011-12-29T04:54:56+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -37,7 +37,7 @@ else {
 }
 
 var URL = 'http://autopagerize.net/'
-var VERSION = '0.0.62'
+var VERSION = '0.0.63'
 var DEBUG = false
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
