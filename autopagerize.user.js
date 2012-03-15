@@ -320,12 +320,14 @@ AutoPager.prototype.request = function() {
             self.error()
         },
         onload: function(res) {
-            if (res.finalUrl && location.host == res.finalUrl.split('/')[2]) {
-                self.requestLoad.apply(self, [res])
+            if (res.finalUrl) {
+                var url_s = res.finalUrl.split(/[\/\?]/)
+                if (url_s[0] == location.protocol && location.host == url_s[2]) {
+                    self.requestLoad.apply(self, [res])
+                    return
+                }
             }
-            else {
-                self.error()
-            }
+            self.error()
         }
     }
     AutoPager.requestFilters.forEach(function(i) { i(opt) }, this)
