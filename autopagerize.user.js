@@ -155,6 +155,7 @@ var AutoPager = function(info) {
         this.initIcon()
         this.initHelp()
         GM_addStyle('@media print{#autopagerize_icon, #autopagerize_help {display: none !important;}}')
+        GM_addStyle('hr.autopagerize_page_separator {clear: both;}')
         this.icon.addEventListener("mouseover", function() {
             self.viewHelp()
         }, true)
