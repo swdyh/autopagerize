@@ -11,6 +11,12 @@
 // @version        0.0.65
 // @updateURL      https://userscripts.org/scripts/source/8551.user.js
 // @icon           http://autopagerize.net/img/icons/icon_032.png
+// @grant          GM_getValue
+// @grant          GM_setValue
+// @grant          GM_addStyle
+// @grant          GM_log
+// @grant          GM_xmlhttpRequest
+// @grant          GM_registerMenuCommand
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
