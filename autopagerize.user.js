@@ -113,7 +113,7 @@ var AutoPager = function(info) {
         return
     }
 
-    this.requestURL = url
+    this.requestURL = this.validateURL(url)
     this.loadedURLs = {}
     this.loadedURLs[location.href] = true
     var toggle = function() {self.stateToggle()}
@@ -397,7 +397,7 @@ AutoPager.prototype.requestLoad = function(res) {
     AutoPager.filters.forEach(function(i) {
         i(page)
     })
-    this.requestURL = url
+    this.requestURL = this.validateURL(url)
     this.showLoading(false)
     this.onScroll()
     if (!url) {
@@ -488,7 +488,9 @@ AutoPager.prototype.getNextURL = function(xpath, doc, url) {
         }
     }
 }
-
+AutoPager.prototype.validateURL = function(url) {
+  return url.replace(/(^https?:\/\/(?:[^./?]+\.){1,}[^./?]+)\?/,"$1/\?")
+}
 AutoPager.prototype.terminate = function() {
     window.removeEventListener('scroll', this.scroll, false)
     this.updateIcon('terminated')
